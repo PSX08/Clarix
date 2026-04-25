@@ -1,0 +1,3049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clarix — Amazon Ads Intelligence</title>
+<meta name="description" content="Clarix — Amazon Ads intelligence platform. Bid alerts, keyword automation, placement analysis, budget pacing and more.">
+<meta property="og:title" content="Clarix — Amazon Ads Intelligence">
+<meta property="og:description" content="Analyse your Amazon Ads data. Bid alerts, negative keywords, placement optimisation, search term harvesting and period comparison — all in one file.">
+<meta name="theme-color" content="#0071e3">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230071e3'/><text y='24' x='4' font-size='22' font-family='Arial' font-weight='bold' fill='white'>C</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:      #f5f5f7;
+    --bg2:     #ffffff;
+    --bg3:     #f0f0f2;
+    --border:  #e4e4e6;
+    --border2: #d0d0d4;
+    --text:    #1a1a1c;
+    --text2:   #6e6e73;
+    --text3:   #aeaeb2;
+    --accent:  #0071e3;
+    --accent2: #0077ed;
+    --red:     #ff3b30;
+    --amber:   #ff9500;
+    --green:   #34c759;
+    --blue:    #007aff;
+    --radius:  10px;
+    --radius-sm: 6px;
+    --font: -apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- LAYOUT ---- */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 10;
+  }
+  .logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    color: var(--accent);
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: var(--font);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .nav { padding: 12px 0; flex: 1; overflow-y: auto; }
+  .nav-section {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text3);
+    padding: 10px 16px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 7px;
+    margin: 1px 8px;
+    transition: background 0.1s, color 0.1s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--accent); background: rgba(0,113,227,0.08); font-weight: 500; }
+  .nav-item .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+  .nav-item.active .dot { background: var(--accent); }
+  .nav-item.locked { opacity: 0.35; cursor: not-allowed; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font);
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: rgba(0,113,227,0.1);
+    color: var(--accent);
+  }
+  .sidebar-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .main { margin-left: 220px; flex: 1; min-height: 100vh; }
+  .topbar {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(245,245,247,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .page-title { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .page-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .file-indicator {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .file-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+  .file-dot.loaded { background: var(--green); box-shadow: 0 0 0 3px rgba(52,199,89,0.15); }
+  .content { padding: 28px; }
+
+  /* ---- UPLOAD ---- */
+  #upload-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 65px);
+    gap: 20px;
+  }
+  .upload-slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 720px;
+    width: 100%;
+  }
+  .upload-slot {
+    border: 1.5px dashed var(--border2);
+    border-radius: 14px;
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: var(--bg2);
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .upload-slot:hover, .upload-slot.drag {
+    border-color: var(--accent);
+    background: rgba(0,113,227,0.02);
+    box-shadow: var(--shadow-md);
+  }
+  .upload-slot.loaded {
+    border-color: var(--green);
+    border-style: solid;
+    background: rgba(52,199,89,0.03);
+  }
+  .upload-slot.slot-b { border-style: dashed; opacity: 0.7; }
+  .upload-slot.slot-b.loaded { opacity: 1; }
+  .slot-period-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    padding: 2px 10px;
+    border-radius: 99px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+  .slot-a-tag { background: rgba(0,113,227,0.1); color: var(--accent); }
+  .slot-b-tag { background: rgba(52,199,89,0.1); color: var(--green); }
+  .upload-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 20px;
+  }
+  .slot-a .upload-icon { background: rgba(0,113,227,0.08); }
+  .slot-b .upload-icon { background: rgba(52,199,89,0.08); }
+  .upload-title { font-size: 14px; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.2px; }
+  .upload-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+  .upload-btn {
+    display: inline-block;
+    padding: 7px 20px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 980px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    border: none;
+    transition: background 0.15s;
+  }
+  .upload-btn:hover { background: var(--accent2); }
+  .upload-btn.green-btn { background: var(--green); }
+  .upload-btn.green-btn:hover { background: #28a745; }
+  .upload-note { font-size: 11px; color: var(--text3); margin-top: 12px; }
+  .slot-loaded-info {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .upload-slot.loaded .slot-loaded-info { display: flex; }
+  .upload-slot.loaded .slot-default-content { display: none; }
+  .slot-file-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    font-family: var(--font-mono);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .slot-file-stats { font-size: 11px; color: var(--text2); }
+  .slot-remove-btn {
+    font-size: 11px;
+    color: var(--red);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font);
+  }
+  .slot-remove-btn:hover { background: rgba(255,59,48,0.08); }
+  .upload-go-btn {
+    padding: 11px 36px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 980px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(0,113,227,0.25);
+    display: none;
+  }
+  .upload-go-btn:hover { background: var(--accent2); transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,113,227,0.3); }
+  .upload-go-btn.visible { display: inline-block; }
+  /* Compare mode toggle in topbar */
+  .compare-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(52,199,89,0.1);
+    color: var(--green);
+    border: 1px solid rgba(52,199,89,0.25);
+    cursor: pointer;
+  }
+  .compare-badge.active { display: flex; }
+  .compare-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  /* ---- METRIC CARDS ---- */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .metric-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+  }
+  .metric-value { font-size: 24px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+  .metric-value.red   { color: var(--red); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.accent { color: var(--accent); }
+
+  /* ---- CONTROLS BAR ---- */
+  .controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 18px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+  .control-group { display: flex; align-items: center; gap: 9px; }
+  .control-label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 110px; height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .range-val {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    min-width: 40px;
+    font-weight: 500;
+  }
+  .sep { width: 1px; height: 20px; background: var(--border); }
+  select, input[type=text] {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font);
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  select:focus, input[type=text]:focus { border-color: var(--accent); background: var(--bg2); }
+  input[type=text] { width: 190px; cursor: text; }
+  input[type=text]::placeholder { color: var(--text3); }
+
+  /* ---- TABS ---- */
+  .tabs { display: flex; gap: 3px; margin-bottom: 14px; }
+  .tab-btn {
+    padding: 6px 14px;
+    border-radius: 980px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 12px;
+    font-family: var(--font);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .tab-btn:hover { border-color: var(--border2); color: var(--text); }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---- TABLE ---- */
+  .table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-family: var(--font);
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text2); }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,0,0,0.015); }
+
+  /* ---- BADGES ---- */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-family: var(--font);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge.red   { background: rgba(255,59,48,0.1);  color: var(--red); }
+  .badge.amber { background: rgba(255,149,0,0.12); color: var(--amber); }
+  .badge.green { background: rgba(52,199,89,0.1);  color: var(--green); }
+  .badge.gray  { background: var(--bg3); color: var(--text2); }
+
+  .mono { font-family: var(--font-mono); }
+  .text2 { color: var(--text2); }
+  .rec-bid { font-family: var(--font-mono); font-weight: 500; }
+  .rec-bid.up   { color: var(--green); }
+  .rec-bid.down { color: var(--amber); }
+  .rec-bid.stop { color: var(--red); }
+
+  .ask-btn {
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--blue);
+    font-size: 11px;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .ask-btn:hover { background: rgba(0,122,255,0.07); border-color: var(--blue); }
+
+  .empty-state {
+    padding: 44px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+  }
+
+  /* ---- EXPORT / TOOLBAR ---- */
+  .export-btn {
+    padding: 7px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 980px;
+    font-size: 12px;
+    font-family: var(--font);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-left: auto;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,113,227,0.04); }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* ---- COMING SOON ---- */
+  .coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: 10px;
+    color: var(--text3);
+    font-size: 13px;
+  }
+  .coming-icon { font-size: 28px; margin-bottom: 6px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ---- SETTINGS ---- */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .settings-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .settings-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.1px;
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 13px; color: var(--text); }
+  .settings-row-hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .settings-input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    padding: 7px 11px;
+    outline: none;
+    width: 160px;
+    transition: border-color 0.15s;
+  }
+  .settings-input:focus { border-color: var(--accent); background: var(--bg2); }
+  .settings-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    padding: 7px 11px;
+    outline: none;
+    width: 160px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .settings-select:focus { border-color: var(--accent); }
+  .settings-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 22px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 980px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .settings-save-btn:hover { background: var(--accent2); transform: scale(1.01); }
+  .settings-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+    border-radius: 980px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .settings-reset-btn:hover { border-color: var(--red); color: var(--red); }
+  .settings-toast {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    font-size: 12px;
+    color: var(--green);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .settings-toast.visible { display: flex; }
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-text">Clarix</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Data</div>
+      <div class="nav-item active" onclick="navigate('upload')">
+        <div class="dot"></div> Upload Report
+      </div>
+      <div class="nav-section" style="margin-top:8px">Automations</div>
+      <div class="nav-item" id="nav-bid" onclick="navigate('bid')">
+        <div class="dot"></div> Bid Alerts
+        <span class="nav-badge" id="badge-bid" style="display:none">0</span>
+      </div>
+      <div class="nav-item" id="nav-neg" onclick="navigate('neg')">
+        <div class="dot"></div> Neg. Keywords
+        <span class="nav-badge" id="badge-neg" style="display:none">0</span>
+      </div>
+      <div class="nav-item" id="nav-placement" onclick="navigate('placement')">
+        <div class="dot"></div> Placement Bids
+        <span class="nav-badge" id="badge-placement" style="display:none">!</span>
+      </div>
+      <div class="nav-item" id="nav-perf" onclick="navigate('perf')">
+        <div class="dot"></div> Performance
+      </div>
+      <div class="nav-item" id="nav-budget" onclick="navigate('budget')">
+        <div class="dot"></div> Budget Pacing
+        <span class="nav-badge" id="badge-budget" style="display:none">!</span>
+      </div>
+      <div class="nav-item" id="nav-harvest" onclick="navigate('harvest')">
+        <div class="dot"></div> KW Harvesting
+        <span class="nav-badge" id="badge-harvest" style="display:none">0</span>
+      </div>
+      <div class="nav-item" id="nav-brand" onclick="navigate('brand')">
+        <div class="dot"></div> Brand Dashboard
+      </div>
+      <div class="nav-item" id="nav-compare" onclick="navigate('compare')" style="display:none">
+        <div class="dot"></div> Period Compare
+        <span class="nav-badge" style="background:rgba(52,199,89,0.15);color:var(--green)">NEW</span>
+      </div>
+      <div class="nav-section" style="margin-top:8px">Preferences</div>
+      <div class="nav-item" id="nav-settings" onclick="navigate('settings')">
+        <div class="dot"></div> Settings
+      </div>
+    </nav>
+    <div class="sidebar-footer" id="file-name-sidebar">No file loaded</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="topbar-title">Upload Report</div>
+        <div class="page-sub" id="topbar-sub">Upload your Amazon Ads reports to get started</div>
+      </div>
+      <div class="file-indicator">
+        <div class="file-dot" id="file-dot"></div>
+        <span id="file-label">No file loaded</span>
+        <div class="compare-badge" id="compare-badge" onclick="navigate('compare')">
+          <div class="compare-dot"></div>
+          Compare mode ON
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- UPLOAD PAGE -->
+      <div id="page-upload" class="page active">
+        <div id="upload-screen">
+
+          <div style="text-align:center;margin-bottom:4px">
+            <div style="font-size:16px;font-weight:600;letter-spacing:-0.3px">Upload your Amazon Ads reports</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Period A is required · Period B is optional (enables comparison mode)</div>
+          </div>
+
+          <div class="upload-slots">
+            <!-- SLOT A -->
+            <div class="upload-slot slot-a" id="slot-a"
+              onclick="document.getElementById('file-input-a').click()"
+              ondragover="event.preventDefault();this.classList.add('drag')"
+              ondragleave="this.classList.remove('drag')"
+              ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0],'a')">
+              <div class="slot-period-tag slot-a-tag">PERIOD A — REQUIRED</div>
+              <div class="slot-default-content">
+                <div class="upload-icon">📊</div>
+                <div class="upload-title">Base period</div>
+                <div class="upload-sub">Your primary Amazon Ads export<br>e.g. January 2026</div>
+                <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-input-a').click()">Choose File</button>
+                <div class="upload-note">.xlsx · ASIN Report, STR Report, Placement Report</div>
+              </div>
+              <div class="slot-loaded-info">
+                <div style="font-size:24px">✅</div>
+                <div class="slot-file-name" id="slot-a-name">—</div>
+                <div class="slot-file-stats" id="slot-a-stats">—</div>
+                <button class="slot-remove-btn" onclick="event.stopPropagation();removeFile('a')">✕ Remove</button>
+              </div>
+            </div>
+
+            <!-- SLOT B -->
+            <div class="upload-slot slot-b" id="slot-b"
+              onclick="document.getElementById('file-input-b').click()"
+              ondragover="event.preventDefault();this.classList.add('drag')"
+              ondragleave="this.classList.remove('drag')"
+              ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0],'b')">
+              <div class="slot-period-tag slot-b-tag">PERIOD B — OPTIONAL</div>
+              <div class="slot-default-content">
+                <div class="upload-icon">📈</div>
+                <div class="upload-title">Comparison period</div>
+                <div class="upload-sub">A second export to compare against<br>e.g. February 2026</div>
+                <button class="upload-btn green-btn" onclick="event.stopPropagation();document.getElementById('file-input-b').click()">Choose File</button>
+                <div class="upload-note">Unlocks MoM / period comparison across all pages</div>
+              </div>
+              <div class="slot-loaded-info">
+                <div style="font-size:24px">✅</div>
+                <div class="slot-file-name" id="slot-b-name">—</div>
+                <div class="slot-file-stats" id="slot-b-stats">—</div>
+                <button class="slot-remove-btn" onclick="event.stopPropagation();removeFile('b')">✕ Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="upload-go-btn" id="upload-go-btn" onclick="proceedToDashboard()">
+            Analyse →
+          </button>
+
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">
+            Processed locally · No data leaves your browser
+          </div>
+
+          <input type="file" id="file-input-a" accept=".xlsx,.xls" onchange="handleFile(this.files[0],'a')" style="display:none">
+          <input type="file" id="file-input-b" accept=".xlsx,.xls" onchange="handleFile(this.files[0],'b')" style="display:none">
+        </div>
+      </div>
+
+      <!-- BID ALERTS PAGE -->
+      <div id="page-bid" class="page">
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">Target ACoS</span>
+            <input type="range" id="acos-thresh" min="5" max="60" value="25" step="1" oninput="updateBidPage()">
+            <span class="range-val" id="acos-val">25%</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Min Spend</span>
+            <input type="range" id="spend-thresh" min="0" max="200" value="20" step="5" oninput="updateBidPage()">
+            <span class="range-val" id="spend-val">₹20</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <input type="text" id="search-filter" placeholder="Search campaign / ASIN…" oninput="renderBidTable()">
+          </div>
+          <div class="control-group">
+            <select id="alert-filter" onchange="renderBidTable()">
+              <option value="all">All alerts</option>
+              <option value="pause">Pause / review</option>
+              <option value="reduce">Reduce bid</option>
+              <option value="scale">Scale up</option>
+              <option value="no-sales">No sales</option>
+              <option value="ok">On target</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="metrics-grid" id="bid-metrics"></div>
+
+        <div class="toolbar">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchBidTab('asin',this)">ASIN / Campaign</button>
+            <button class="tab-btn" onclick="switchBidTab('kw',this)">Search Terms</button>
+          </div>
+          <select id="sort-col" onchange="renderBidTable()" style="margin-left:0">
+            <option value="ACoS">Sort: ACoS ↓</option>
+            <option value="Spend">Sort: Spend ↓</option>
+            <option value="Sales">Sort: Sales ↓</option>
+            <option value="Orders">Sort: Orders ↓</option>
+          </select>
+          <button class="export-btn" onclick="exportBidCSV()">Export recommendations →</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead id="bid-thead"></thead>
+            <tbody id="bid-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NEGATIVE KEYWORD PAGE -->
+      <div id="page-neg" class="page">
+
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">Min Spend (₹)</span>
+            <input type="range" id="neg-spend" min="5" max="200" value="20" step="5" oninput="updateNegPage()">
+            <span class="range-val" id="neg-spend-val">₹20</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Min Clicks</span>
+            <input type="range" id="neg-clicks" min="1" max="10" value="1" step="1" oninput="updateNegPage()">
+            <span class="range-val" id="neg-clicks-val">1</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Match type</span>
+            <select id="neg-match" onchange="renderNegTable()">
+              <option value="NEGATIVE EXACT">Negative Exact</option>
+              <option value="NEGATIVE PHRASE">Negative Phrase</option>
+            </select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <input type="text" id="neg-search" placeholder="Filter search terms…" oninput="renderNegTable()">
+          </div>
+        </div>
+
+        <div class="metrics-grid" id="neg-metrics"></div>
+
+        <div class="toolbar">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchNegTab('zero',this)">Zero sales</button>
+            <button class="tab-btn" onclick="switchNegTab('highacos',this)">High ACoS</button>
+            <button class="tab-btn" onclick="switchNegTab('all',this)">All terms</button>
+          </div>
+          <select id="neg-brand" onchange="renderNegTable()" style="margin-left:0">
+            <option value="all">All brands</option>
+          </select>
+          <select id="neg-sort" onchange="renderNegTable()">
+            <option value="Spend">Sort: Spend ↓</option>
+            <option value="Clicks">Sort: Clicks ↓</option>
+            <option value="ACoS">Sort: ACoS ↓</option>
+          </select>
+          <button class="export-btn" onclick="exportNegCSV()">Export negatives list →</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:24%">Search Term</th>
+                <th style="width:12%">Brand</th>
+                <th style="width:22%">Campaign</th>
+                <th style="width:8%;text-align:right">Spend</th>
+                <th style="width:7%;text-align:right">Clicks</th>
+                <th style="width:7%;text-align:right">Orders</th>
+                <th style="width:8%;text-align:right">ACoS</th>
+                <th style="width:8%">Reason</th>
+                <th style="width:4%">
+                  <input type="checkbox" id="neg-select-all" onchange="toggleAllNeg(this)" title="Select all">
+                </th>
+              </tr>
+            </thead>
+            <tbody id="neg-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="neg-action-bar" style="display:none;margin-top:16px;display:flex;gap:10px;align-items:center">
+          <span id="neg-selected-count" style="font-size:12px;font-family:var(--font-mono);color:var(--text2)">0 selected</span>
+          <button class="export-btn" onclick="exportSelectedNeg()" style="margin-left:0">Export selected →</button>
+        </div>
+      </div>
+      <!-- PLACEMENT BIDS PAGE -->
+      <div id="page-placement" class="page">
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">Target ACoS</span>
+            <input type="range" id="plc-acos" min="5" max="60" value="25" step="1" oninput="updatePlacementPage()">
+            <span class="range-val" id="plc-acos-val">25%</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <input type="text" id="plc-search" placeholder="Filter campaigns…" oninput="renderPlacementTable()">
+          </div>
+          <div class="control-group">
+            <select id="plc-brand" onchange="renderPlacementTable()">
+              <option value="all">All brands</option>
+            </select>
+          </div>
+        </div>
+        <div id="plc-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px"></div>
+        <div id="plc-modifiers" style="margin-bottom:24px"></div>
+        <div class="toolbar">
+          <span style="font-size:11px;font-family:var(--font-mono);color:var(--text3)">Campaign-level breakdown</span>
+          <select id="plc-sort" onchange="renderPlacementTable()" style="margin-left:auto">
+            <option value="Spend">Sort: Spend ↓</option>
+            <option value="ACoS">Sort: ACoS ↓</option>
+            <option value="Orders">Sort: Orders ↓</option>
+          </select>
+          <button class="export-btn" onclick="exportPlacementCSV()">Export adjustments →</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:22%">Campaign</th>
+              <th style="width:10%">Brand</th>
+              <th style="width:14%">Placement</th>
+              <th style="width:8%;text-align:right">Spend</th>
+              <th style="width:8%;text-align:right">Sales</th>
+              <th style="width:7%;text-align:right">Orders</th>
+              <th style="width:7%;text-align:right">ACoS</th>
+              <th style="width:7%;text-align:right">CTR%</th>
+              <th style="width:9%">Status</th>
+              <th style="width:8%;text-align:right">Rec. Modifier</th>
+            </tr></thead>
+            <tbody id="plc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE SUMMARY PAGE -->
+      <div id="page-perf" class="page">
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">View by</span>
+            <select id="perf-period" onchange="renderPerfPage()">
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+            </select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Source</span>
+            <select id="perf-source" onchange="renderPerfPage()">
+              <option value="asin">ASIN Report</option>
+              <option value="str">Search Term Report</option>
+              <option value="placement">Placement Report</option>
+            </select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Brand</span>
+            <select id="perf-brand" onchange="renderPerfPage()"><option value="all">All brands</option></select>
+          </div>
+          <button class="export-btn" onclick="exportPerfCSV()">Export summary →</button>
+        </div>
+        <div class="metrics-grid" id="perf-kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:20px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+          <div class="metric-card" style="padding:20px">
+            <div class="metric-label" style="margin-bottom:16px">Spend vs Sales</div>
+            <div style="position:relative;height:200px"><canvas id="perf-chart-spend" role="img" aria-label="Spend vs Sales trend"></canvas></div>
+          </div>
+          <div class="metric-card" style="padding:20px">
+            <div class="metric-label" style="margin-bottom:16px">ACoS trend</div>
+            <div style="position:relative;height:200px"><canvas id="perf-chart-acos" role="img" aria-label="ACoS trend"></canvas></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:12%">Period</th>
+              <th style="width:10%;text-align:right">Spend</th>
+              <th style="width:10%;text-align:right">Sales</th>
+              <th style="width:8%;text-align:right">Orders</th>
+              <th style="width:8%;text-align:right">ACoS</th>
+              <th style="width:7%;text-align:right">ROAS</th>
+              <th style="width:7%;text-align:right">Clicks</th>
+              <th style="width:7%;text-align:right">CTR%</th>
+              <th style="width:7%;text-align:right">CVR%</th>
+              <th style="width:8%;text-align:right">CPC</th>
+              <th style="width:16%">vs prev</th>
+            </tr></thead>
+            <tbody id="perf-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BUDGET PACING PAGE -->
+      <div id="page-budget" class="page">
+
+        <!-- Global monthly budget input -->
+        <div class="controls-bar" style="flex-wrap:wrap;gap:20px">
+          <div class="control-group">
+            <span class="control-label">Monthly budget (₹)</span>
+            <input type="text" id="budget-total" value="50000" style="width:120px" oninput="renderBudgetPage()" placeholder="e.g. 50000">
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Month</span>
+            <select id="budget-month" onchange="renderBudgetPage()"></select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Alert threshold</span>
+            <input type="range" id="budget-alert-pct" min="5" max="30" value="15" step="1" oninput="updateBudgetControls()">
+            <span class="range-val" id="budget-alert-val">±15%</span>
+          </div>
+          <button class="export-btn" onclick="exportBudgetCSV()">Export pacing report →</button>
+        </div>
+
+        <!-- Pacing summary cards -->
+        <div class="metrics-grid" id="budget-kpis"></div>
+
+        <!-- Pacing bar visual -->
+        <div class="metric-card" style="margin-bottom:20px;padding:20px">
+          <div class="metric-label" style="margin-bottom:12px">Spend pacing — actual vs projected</div>
+          <div id="clarix-budget-pacing-bar"></div>
+        </div>
+
+        <!-- Daily spend chart -->
+        <div class="metric-card" style="margin-bottom:20px;padding:20px">
+          <div class="metric-label" style="margin-bottom:12px">Daily spend with budget runway</div>
+          <div style="position:relative;height:220px">
+            <canvas id="budget-chart" role="img" aria-label="Daily spend vs budget pace chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Campaign pacing table -->
+        <div style="font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:8px">
+          Campaign-level pacing — set per-campaign budgets below (optional)
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:32%">Campaign</th>
+              <th style="width:12%;text-align:right">Actual Spend</th>
+              <th style="width:14%;text-align:right">Budget (₹)</th>
+              <th style="width:10%;text-align:right">% Used</th>
+              <th style="width:12%;text-align:right">Projected EOD</th>
+              <th style="width:10%">Status</th>
+              <th style="width:10%;text-align:right">Daily Avg</th>
+            </tr></thead>
+            <tbody id="budget-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEARCH TERM HARVESTING PAGE -->
+      <div id="page-harvest" class="page">
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">Min orders</span>
+            <input type="range" id="harv-orders" min="1" max="10" value="1" step="1" oninput="updateHarvestControls()">
+            <span class="range-val" id="harv-orders-val">1</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Max ACoS</span>
+            <input type="range" id="harv-acos" min="5" max="80" value="40" step="1" oninput="updateHarvestControls()">
+            <span class="range-val" id="harv-acos-val">40%</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Match type to add</span>
+            <select id="harv-match">
+              <option value="EXACT">Exact</option>
+              <option value="PHRASE">Phrase</option>
+              <option value="BROAD">Broad</option>
+            </select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <input type="text" id="harv-search" placeholder="Filter search terms…" oninput="renderHarvestTable()">
+          </div>
+          <button class="export-btn" onclick="exportHarvestCSV()">Export keyword list →</button>
+        </div>
+
+        <div class="metrics-grid" id="harv-metrics"></div>
+
+        <div class="toolbar">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchHarvTab('new',this)">New candidates</button>
+            <button class="tab-btn" onclick="switchHarvTab('existing',this)">Already targeting</button>
+            <button class="tab-btn" onclick="switchHarvTab('all',this)">All converting</button>
+          </div>
+          <select id="harv-brand" onchange="renderHarvestTable()" style="margin-left:0">
+            <option value="all">All brands</option>
+          </select>
+          <select id="harv-sort" onchange="renderHarvestTable()">
+            <option value="Orders">Sort: Orders ↓</option>
+            <option value="Sales">Sort: Sales ↓</option>
+            <option value="CVR">Sort: CVR% ↓</option>
+            <option value="ACoS">Sort: ACoS ↓</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:22%">Search Term</th>
+              <th style="width:9%">Brand</th>
+              <th style="width:20%">Campaign</th>
+              <th style="width:7%;text-align:right">Orders</th>
+              <th style="width:8%;text-align:right">Sales</th>
+              <th style="width:7%;text-align:right">ACoS</th>
+              <th style="width:7%;text-align:right">CVR%</th>
+              <th style="width:6%;text-align:right">Clicks</th>
+              <th style="width:8%">Match type</th>
+              <th style="width:6%">
+                <input type="checkbox" id="harv-select-all" onchange="toggleAllHarv(this)" title="Select all">
+              </th>
+            </tr></thead>
+            <tbody id="harv-tbody"></tbody>
+          </table>
+        </div>
+        <div id="harv-action-bar" style="display:none;margin-top:16px;gap:10px;align-items:center">
+          <span id="harv-selected-count" style="font-size:12px;font-family:var(--font-mono);color:var(--text2)">0 selected</span>
+          <button class="export-btn" onclick="exportSelectedHarv()" style="margin-left:0">Export selected →</button>
+        </div>
+      </div>
+
+      <!-- BRAND DASHBOARD PAGE -->
+      <div id="page-brand" class="page">
+        <div class="controls-bar">
+          <div class="control-group">
+            <span class="control-label">Sort by</span>
+            <select id="brand-sort" onchange="renderBrandPage()">
+              <option value="Sales">Sales ↓</option>
+              <option value="Spend">Spend ↓</option>
+              <option value="ACoS">ACoS ↓</option>
+              <option value="Orders">Orders ↓</option>
+              <option value="ROAS">ROAS ↓</option>
+            </select>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">Target ACoS</span>
+            <input type="range" id="brand-acos-target" min="5" max="60" value="25" step="1" oninput="updateBrandControls()">
+            <span class="range-val" id="brand-acos-val">25%</span>
+          </div>
+          <button class="export-btn" onclick="exportBrandCSV()">Export brand report →</button>
+        </div>
+
+        <!-- Brand scorecards grid -->
+        <div id="brand-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px"></div>
+
+        <!-- Brand comparison table -->
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:14%">Brand</th>
+              <th style="width:9%;text-align:right">Spend</th>
+              <th style="width:9%;text-align:right">Sales</th>
+              <th style="width:7%;text-align:right">Orders</th>
+              <th style="width:7%;text-align:right">ACoS</th>
+              <th style="width:7%;text-align:right">ROAS</th>
+              <th style="width:7%;text-align:right">Clicks</th>
+              <th style="width:7%;text-align:right">CTR%</th>
+              <th style="width:7%;text-align:right">CVR%</th>
+              <th style="width:7%;text-align:right">CPC</th>
+              <th style="width:19%">Health</th>
+            </tr></thead>
+            <tbody id="brand-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div id="page-settings" class="page">
+
+        <div id="settings-toast" class="settings-toast">✓ Settings saved successfully</div>
+
+        <div class="settings-grid">
+
+          <!-- Targets -->
+          <div class="settings-section">
+            <div class="settings-section-title">Performance targets</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Target ACoS</div>
+                <div class="settings-row-hint">Applied across Bid Alerts, Placement & Brand pages</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input class="settings-input" type="number" id="s-acos" min="1" max="100" value="25" style="width:80px;text-align:right">
+                <span style="font-size:13px;color:var(--text2)">%</span>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Target ROAS</div>
+                <div class="settings-row-hint">Used in Brand health scoring</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input class="settings-input" type="number" id="s-roas" min="1" max="50" value="3" style="width:80px;text-align:right">
+                <span style="font-size:13px;color:var(--text2)">x</span>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Min spend threshold</div>
+                <div class="settings-row-hint">Filter low-spend rows from alerts</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;color:var(--text2)">₹</span>
+                <input class="settings-input" type="number" id="s-min-spend" min="0" value="20" style="width:80px;text-align:right">
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Budget alert threshold</div>
+                <div class="settings-row-hint">Pacing variance before alert triggers</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input class="settings-input" type="number" id="s-budget-alert" min="1" max="50" value="15" style="width:80px;text-align:right">
+                <span style="font-size:13px;color:var(--text2)">%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keyword defaults -->
+          <div class="settings-section">
+            <div class="settings-section-title">Keyword defaults</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Negative match type</div>
+                <div class="settings-row-hint">Default for Negative Keyword export</div>
+              </div>
+              <select class="settings-select" id="s-neg-match">
+                <option value="NEGATIVE EXACT">Negative Exact</option>
+                <option value="NEGATIVE PHRASE">Negative Phrase</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Harvest match type</div>
+                <div class="settings-row-hint">Default for KW Harvesting export</div>
+              </div>
+              <select class="settings-select" id="s-harv-match">
+                <option value="EXACT">Exact</option>
+                <option value="PHRASE">Phrase</option>
+                <option value="BROAD">Broad</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Min orders to harvest</div>
+                <div class="settings-row-hint">Minimum orders before promoting a term</div>
+              </div>
+              <input class="settings-input" type="number" id="s-harv-orders" min="1" max="20" value="1" style="width:80px;text-align:right">
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Max ACoS to harvest</div>
+                <div class="settings-row-hint">Only harvest terms below this ACoS</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input class="settings-input" type="number" id="s-harv-acos" min="1" max="100" value="40" style="width:80px;text-align:right">
+                <span style="font-size:13px;color:var(--text2)">%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget -->
+          <div class="settings-section">
+            <div class="settings-section-title">Budget defaults</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Monthly budget</div>
+                <div class="settings-row-hint">Pre-filled in Budget Pacing page</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;color:var(--text2)">₹</span>
+                <input class="settings-input" type="number" id="s-monthly-budget" min="0" value="50000" style="width:110px;text-align:right">
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Performance period</div>
+                <div class="settings-row-hint">Default view in Performance Summary</div>
+              </div>
+              <select class="settings-select" id="s-perf-period">
+                <option value="week">Weekly</option>
+                <option value="month">Monthly</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Display -->
+          <div class="settings-section">
+            <div class="settings-section-title">Display</div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Currency symbol</div>
+                <div class="settings-row-hint">Shown next to spend and sales figures</div>
+              </div>
+              <select class="settings-select" id="s-currency">
+                <option value="₹">₹ Indian Rupee</option>
+                <option value="$">$ US Dollar</option>
+                <option value="£">£ British Pound</option>
+                <option value="€">€ Euro</option>
+                <option value="¥">¥ Japanese Yen</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">Brand filter default</div>
+                <div class="settings-row-hint">Pre-selected brand across all pages</div>
+              </div>
+              <select class="settings-select" id="s-brand-default">
+                <option value="all">All brands</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="settings-save-btn" onclick="saveSettings()">Save settings</button>
+          <button class="settings-reset-btn" onclick="resetSettings()">Reset to defaults</button>
+          <span style="font-size:11px;color:var(--text3);margin-left:4px">Settings are saved locally in your browser</span>
+        </div>
+      </div>
+
+      <!-- PERIOD COMPARE PAGE -->
+      <div id="page-compare" class="page">
+
+        <div class="controls-bar">
+          <div class="control-group">
+            <span style="font-size:13px;font-weight:500;color:var(--text)">Period A</span>
+            <span id="cmp-label-a" style="font-size:12px;font-family:var(--font-mono);color:var(--accent)">—</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span style="font-size:13px;font-weight:500;color:var(--text)">Period B</span>
+            <span id="cmp-label-b" style="font-size:12px;font-family:var(--font-mono);color:var(--green)">—</span>
+          </div>
+          <div class="sep"></div>
+          <div class="control-group">
+            <span class="control-label">View</span>
+            <select id="cmp-view" onchange="renderComparePage()">
+              <option value="overview">Overview KPIs</option>
+              <option value="asin">By ASIN / Campaign</option>
+              <option value="brand">By Brand</option>
+              <option value="placement">By Placement</option>
+              <option value="kw">By Search Term</option>
+            </select>
+          </div>
+          <button class="export-btn" onclick="exportCompareCSV()">Export comparison →</button>
+        </div>
+
+        <!-- KPI delta cards -->
+        <div id="cmp-kpis" class="metrics-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:20px"></div>
+
+        <!-- Detail table -->
+        <div class="table-wrap">
+          <table>
+            <thead id="cmp-thead"></thead>
+            <tbody id="cmp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="page-coming" class="page">
+        <div class="coming-soon">
+          <div class="coming-icon">⚙️</div>
+          <div>This module is coming soon.</div>
+          <div style="font-size:11px;color:var(--text3)">Upload your data to begin with the available modules.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let STATE = { asinData: [], kwData: [], placementData: [], fileName: '', bidTab: 'asin' };
+let STATE_B = null;  // second period — null if not loaded
+let currentPage = 'upload';
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+const PAGE_META = {
+  upload: { title: 'Upload Report', sub: 'Upload your Amazon Ads reports to get started' },
+  bid:    { title: 'Bid Optimization Alerts', sub: 'Live alerts based on your ACoS target' },
+  neg:       { title: 'Negative Keyword Automation', sub: 'Identify wasteful search terms to negate' },
+  placement: { title: 'Placement Bid Adjustments', sub: 'Optimise bids by placement — Top of Search, Product Pages, Rest of Search' },
+  perf:      { title: 'Performance Summary', sub: 'Weekly & monthly trends across spend, sales, ACoS and orders' },
+  budget:    { title: 'Budget Pacing', sub: 'Track daily spend vs monthly targets — catch over/underspend early' },
+  harvest:   { title: 'Search Term Harvesting', sub: 'Find converting search terms to promote to exact match keywords' },
+  brand:     { title: 'Brand Dashboard', sub: 'Side-by-side scorecard for every brand in your account' },
+  settings:  { title: 'Settings', sub: 'Configure default targets, budgets and keyword preferences' },
+  compare:   { title: 'Period Comparison', sub: 'Side-by-side metrics — Period A vs Period B' },
+};
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const target = PAGE_META[page] ? page : 'coming';
+  document.getElementById('page-' + target).classList.add('active');
+  document.getElementById('nav-' + page)?.classList.add('active');
+  if(page === 'upload') document.querySelector('.nav-item').classList.add('active');
+
+  const meta = PAGE_META[page] || { title: 'Coming soon', sub: 'This automation is in development' };
+  document.getElementById('topbar-title').textContent = meta.title;
+  document.getElementById('topbar-sub').textContent = meta.sub;
+  currentPage = page;
+  if(page === 'bid') renderBidPage();
+  if(page === 'neg') renderNegPage();
+  if(page === 'placement') renderPlacementPage();
+  if(page === 'perf') renderPerfPage();
+  if(page === 'budget') renderBudgetPage();
+  if(page === 'harvest') renderHarvestPage();
+  if(page === 'brand') renderBrandPage();
+  if(page === 'settings') renderSettingsPage();
+  if(page === 'compare') renderComparePage();
+}
+
+// ─── FILE HANDLING ────────────────────────────────────────────────────────────
+const PENDING = { a: null, b: null };
+
+function handleFile(file, slot) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    PENDING[slot] = { buffer: e.target.result, name: file.name };
+    markSlotLoaded(slot, file.name, e.target.result);
+    updateGoButton();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function markSlotLoaded(slot, name, buffer) {
+  try {
+    const wb   = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const asinS = wb.SheetNames.find(s => s.toLowerCase().includes('asin') && !s.toLowerCase().includes('pivot'));
+    const rows  = asinS ? XLSX.utils.sheet_to_json(wb.Sheets[asinS]).length : '?';
+    document.getElementById(`slot-${slot}-name`).textContent  = name;
+    document.getElementById(`slot-${slot}-stats`).textContent = `${Number(rows).toLocaleString()} rows · ${wb.SheetNames.length} sheets`;
+  } catch(e) {
+    document.getElementById(`slot-${slot}-name`).textContent  = name;
+    document.getElementById(`slot-${slot}-stats`).textContent = 'Ready';
+  }
+  document.getElementById(`slot-${slot}`).classList.add('loaded');
+}
+
+function removeFile(slot) {
+  PENDING[slot] = null;
+  document.getElementById(`slot-${slot}`).classList.remove('loaded');
+  document.getElementById(`file-input-${slot}`).value = '';
+  if (slot === 'b') {
+    STATE_B = null;
+    document.getElementById('compare-badge').classList.remove('active');
+    document.getElementById('nav-compare').style.display = 'none';
+  }
+  updateGoButton();
+}
+
+function updateGoButton() {
+  const btn = document.getElementById('upload-go-btn');
+  if (PENDING.a) btn.classList.add('visible');
+  else           btn.classList.remove('visible');
+  btn.textContent = PENDING.a && PENDING.b ? 'Analyse both periods →' : 'Analyse →';
+}
+
+function proceedToDashboard() {
+  if (!PENDING.a) return;
+  const stateA = buildState(PENDING.a.buffer, PENDING.a.name);
+  if (!stateA) return;
+  Object.assign(STATE, stateA);
+  STATE_B = PENDING.b ? buildState(PENDING.b.buffer, PENDING.b.name) : null;
+
+  document.getElementById('file-dot').classList.add('loaded');
+  document.getElementById('file-label').textContent = STATE.fileName;
+  document.getElementById('file-name-sidebar').textContent = STATE.fileName;
+
+  if (STATE_B) {
+    document.getElementById('compare-badge').classList.add('active');
+    document.getElementById('nav-compare').style.display = 'flex';
+  }
+
+  const alertCount = computeAlerts(STATE.asinData).filter(a=>a&&a.type!=='ok').length
+                   + computeAlerts(STATE.kwData).filter(a=>a&&a.type!=='ok').length;
+  const badge = document.getElementById('badge-bid');
+  badge.textContent = alertCount;
+  badge.style.display = alertCount > 0 ? 'inline' : 'none';
+
+  navigate('bid');
+  renderNegPage();
+  renderPlacementPage();
+  renderPerfPage();
+  renderBudgetPage();
+  renderHarvestPage();
+  renderBrandPage();
+  applySettingsOnLoad();
+}
+
+function buildState(buffer, fileName) {
+  try {
+    const wb     = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const sheets = wb.SheetNames;
+    const asinSheet      = sheets.find(s => s.toLowerCase().includes('asin') && !s.toLowerCase().includes('pivot'));
+    const strSheet       = sheets.find(s => s.toLowerCase().includes('str')  && !s.toLowerCase().includes('pivot'));
+    const placementSheet = sheets.find(s => s.toLowerCase().includes('placement') && !s.toLowerCase().includes('pivot'));
+    if (!asinSheet || !strSheet) { alert(`Cannot find ASIN/STR sheets in "${fileName}"`); return null; }
+
+    let asinData      = parseSheet(wb.Sheets[asinSheet]);
+    let kwData        = parseSheet(wb.Sheets[strSheet]);
+    let placementData = placementSheet ? parseSheet(wb.Sheets[placementSheet]) : [];
+    const rawAsin = asinData.map(r=>({...r})), rawKw = kwData.map(r=>({...r})), rawPlacement = placementData.map(r=>({...r}));
+
+    // Aggregate first — metrics are computed inside aggregateBy from summed values (correct)
+    asinData      = aggregateBy(asinData, ['Advertised ASIN','Campaign Name']);
+    kwData        = aggregateBy(kwData, ['Customer Search Term','Brand','Campaign Name']);
+    placementData = aggregateBy(placementData, ['Campaign Name','Brand','Placement']);
+    return { asinData, kwData, placementData, rawAsin, rawKw, rawPlacement, fileName, bidTab:'asin' };
+  } catch(e) { alert(`Error parsing "${fileName}": ${e.message}`); return null; }
+}
+
+function parseSheet(ws) {
+  const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  // Normalize column names (trim spaces)
+  return json.map(row => {
+    const clean = {};
+    for (const k in row) clean[k.trim()] = row[k];
+    return clean;
+  });
+}
+
+function aggregateBy(data, keys) {
+  const map = {};
+  data.forEach(r => {
+    const key = keys.map(k => r[k] || '').join('|||');
+    if (!map[key]) {
+      map[key] = { ...r, Spend: 0, '14 Day Total Sales': 0, '14 Day Total Orders (#)': 0, Clicks: 0, Impressions: 0 };
+    }
+    map[key].Spend += Number(r.Spend) || 0;
+    map[key]['14 Day Total Sales'] += Number(r['14 Day Total Sales']) || 0;
+    map[key]['14 Day Total Orders (#)'] += Number(r['14 Day Total Orders (#)']) || 0;
+    map[key].Clicks += Number(r.Clicks) || 0;
+    map[key].Impressions += Number(r.Impressions) || 0;
+  });
+  return Object.values(map).map(r => ({
+    ...r,
+    ACoS: r['14 Day Total Sales'] > 0 ? +(r.Spend / r['14 Day Total Sales'] * 100).toFixed(1) : -1,
+    CPC:  r.Clicks > 0 ? +(r.Spend / r.Clicks).toFixed(2) : 0,
+    ROAS: r.Spend > 0 ? +(r['14 Day Total Sales'] / r.Spend).toFixed(2) : 0,
+    CVR:  r.Clicks > 0 ? +(r['14 Day Total Orders (#)'] / r.Clicks * 100).toFixed(2) : 0,
+    Orders: r['14 Day Total Orders (#)'],
+    Sales: r['14 Day Total Sales'],
+  }));
+}
+
+// ─── BID ALERTS LOGIC ────────────────────────────────────────────────────────
+function getThresh() {
+  return {
+    acos:  +document.getElementById('acos-thresh').value  || 25,
+    spend: +document.getElementById('spend-thresh').value || 0,
+  };
+}
+
+function getAlert(row, thresh) {
+  if (row.Spend < thresh.spend && row.ACoS === -1) return null;
+  if (row.Sales === 0 && row.Spend >= thresh.spend) return { type: 'no-sales', label: 'No sales', cls: 'red' };
+  if (row.ACoS === -1) return null;
+  if (row.ACoS > thresh.acos * 1.5) return { type: 'pause', label: 'Pause / review', cls: 'red' };
+  if (row.ACoS > thresh.acos)       return { type: 'reduce', label: 'Reduce bid', cls: 'amber' };
+  if (row.ACoS < thresh.acos * 0.5 && row.Orders > 0) return { type: 'scale', label: 'Scale up', cls: 'green' };
+  return { type: 'ok', label: 'On target', cls: 'gray' };
+}
+
+function computeAlerts(data) {
+  const thresh = getThresh();
+  return data.map(r => getAlert(r, thresh));
+}
+
+function recBid(row, thresh) {
+  const a = getAlert(row, thresh);
+  if (!a || a.type === 'ok') return { text: '—', cls: '' };
+  if (a.type === 'no-sales' || a.type === 'pause') return { text: 'Pause', cls: 'stop' };
+  // Recommended bid = current CPC × (target ACoS ÷ actual ACoS)
+  // Derived from: target ACoS = (new_bid × target_CVR) / AOV, solved for new_bid
+  if (a.type === 'reduce') return { text: '↓ ₹' + Math.round(row.CPC * (thresh.acos / row.ACoS)), cls: 'down' };
+  if (a.type === 'scale')  return { text: '↑ ₹' + Math.round(row.CPC * (thresh.acos / row.ACoS)), cls: 'up' };
+  return { text: '—', cls: '' };
+}
+
+function updateBidPage() {
+  document.getElementById('acos-val').textContent = document.getElementById('acos-thresh').value + '%';
+  document.getElementById('spend-val').textContent = '₹' + document.getElementById('spend-thresh').value;
+  renderBidPage();
+}
+
+function renderBidPage() {
+  const thresh = getThresh();
+  // Alert counts across both ASIN and keyword rows (correct — different granularity)
+  const all = [...STATE.asinData, ...STATE.kwData];
+  const alerts = all.map(r => getAlert(r, thresh)).filter(Boolean);
+  const pause  = alerts.filter(a => a.type === 'pause' || a.type === 'no-sales').length;
+  const reduce = alerts.filter(a => a.type === 'reduce').length;
+  const scale  = alerts.filter(a => a.type === 'scale').length;
+  const ok     = alerts.filter(a => a.type === 'ok').length;
+  // Spend totals from asinData only — avoids double-counting with kwData
+  const wasted     = STATE.asinData.filter(r => r.Sales === 0 && r.Spend >= thresh.spend).reduce((s,r) => s + r.Spend, 0);
+  const totalSpend = STATE.asinData.reduce((s, r) => s + r.Spend, 0);
+
+  document.getElementById('bid-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total entries</div><div class="metric-value">${all.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Pause / review</div><div class="metric-value red">${pause}</div></div>
+    <div class="metric-card"><div class="metric-label">Reduce bid</div><div class="metric-value amber">${reduce}</div></div>
+    <div class="metric-card"><div class="metric-label">Scale up</div><div class="metric-value green">${scale}</div></div>
+    <div class="metric-card"><div class="metric-label">On target</div><div class="metric-value">${ok}</div></div>
+    <div class="metric-card"><div class="metric-label">Wasted spend</div><div class="metric-value red">₹${wasted.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total spend</div><div class="metric-value accent">₹${totalSpend.toFixed(0)}</div></div>
+  `;
+  renderBidTable();
+}
+
+function switchBidTab(tab, btn) {
+  STATE.bidTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBidTable();
+}
+
+function renderBidTable() {
+  const thresh = getThresh();
+  const tab = STATE.bidTab;
+  const searchQ = (document.getElementById('search-filter').value || '').toLowerCase();
+  const alertF  = document.getElementById('alert-filter').value;
+  const sortC   = document.getElementById('sort-col').value;
+  const nameField = tab === 'asin' ? 'Advertised ASIN' : 'Customer Search Term';
+
+  let data = (tab === 'asin' ? STATE.asinData : STATE.kwData)
+    .map(r => ({ ...r, _alert: getAlert(r, thresh) }))
+    .filter(r => r._alert !== null);
+
+  if (searchQ) data = data.filter(r =>
+    (r[nameField] || '').toLowerCase().includes(searchQ) ||
+    (r['Campaign Name'] || '').toLowerCase().includes(searchQ)
+  );
+  if (alertF !== 'all') data = data.filter(r => r._alert && r._alert.type === alertF);
+  data.sort((a, b) => {
+    if (sortC === 'ACoS') return (b.ACoS === -1 ? 99999 : b.ACoS) - (a.ACoS === -1 ? 99999 : a.ACoS);
+    return (b[sortC] || 0) - (a[sortC] || 0);
+  });
+
+  // THEAD
+  const asinCols = tab === 'asin'
+    ? `<th style="width:13%">ASIN</th><th style="width:22%">Campaign</th>`
+    : `<th style="width:18%">Search Term</th><th style="width:10%">Brand</th><th style="width:16%">Campaign</th>`;
+  document.getElementById('bid-thead').innerHTML = `<tr>
+    ${asinCols}
+    <th style="width:8%;text-align:right">Spend</th>
+    <th style="width:7%;text-align:right">ACoS</th>
+    <th style="width:6%;text-align:right">Orders</th>
+    <th style="width:6%;text-align:right">CVR%</th>
+    <th style="width:7%;text-align:right">ROAS</th>
+    <th style="width:9%">Alert</th>
+    <th style="width:9%;text-align:right">Rec. Bid</th>
+    <th style="width:7%"></th>
+  </tr>`;
+
+  if (!data.length) {
+    document.getElementById('bid-tbody').innerHTML = `<tr><td colspan="10" style="padding:0"><div class="empty-state">No alerts match current filters.</div></td></tr>`;
+    return;
+  }
+
+  const rows = data.map(r => {
+    const rb = recBid(r, thresh);
+    const nameCells = tab === 'asin'
+      ? `<td class="mono" title="${r['Advertised ASIN']}" style="width:13%">${r['Advertised ASIN'] || '—'}</td>
+         <td class="text2" title="${r['Campaign Name']}" style="width:22%">${(r['Campaign Name'] || '').replace('HM | SP | ', '')}</td>`
+      : `<td title="${r['Customer Search Term']}" style="width:18%">${r['Customer Search Term'] || '—'}</td>
+         <td class="text2" style="width:10%">${r['Brand'] || '—'}</td>
+         <td class="text2" title="${r['Campaign Name']}" style="width:16%">${(r['Campaign Name'] || '').replace('HM | SP | ', '')}</td>`;
+    const acos = r.ACoS === -1 ? '<span style="color:var(--text3)">—</span>' : r.ACoS + '%';
+    const roas = r.ROAS > 0 ? r.ROAS.toFixed(1) + 'x' : '—';
+    const cvr  = r.CVR > 0 ? r.CVR + '%' : '<span style="color:var(--text3)">—</span>';
+    const alertQ = encodeURIComponent(`${r[tab==='asin'?'Advertised ASIN':'Customer Search Term']} in "${r['Campaign Name']}" — ACoS ${r.ACoS===-1?'no sales':r.ACoS+'%'}, CVR ${r.CVR>0?r.CVR+'%':'0%'}, spend ₹${r.Spend.toFixed(0)}, orders ${r.Orders}. Give me a bid optimization recommendation.`);
+    return `<tr>
+      ${nameCells}
+      <td style="text-align:right" class="mono">₹${r.Spend.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${acos}</td>
+      <td style="text-align:right" class="mono">${r.Orders}</td>
+      <td style="text-align:right" class="mono">${cvr}</td>
+      <td style="text-align:right" class="mono">${roas}</td>
+      <td><span class="badge ${r._alert.cls}">${r._alert.label}</span></td>
+      <td style="text-align:right"><span class="rec-bid ${rb.cls}">${rb.text}</span></td>
+      <td><button class="ask-btn" onclick="window.open('https://claude.ai/new?q=${alertQ}','_blank')">Ask AI ↗</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('bid-tbody').innerHTML = rows;
+}
+
+
+// ─── NEGATIVE KEYWORD LOGIC ──────────────────────────────────────────────────
+let NEG_TAB = 'zero';
+let negSelected = new Set();
+
+function updateNegPage() {
+  document.getElementById('neg-spend-val').textContent = '₹' + document.getElementById('neg-spend').value;
+  document.getElementById('neg-clicks-val').textContent = document.getElementById('neg-clicks').value;
+  renderNegPage();
+}
+
+function renderNegPage() {
+  const data = STATE.kwData;
+  const minSpend = +document.getElementById('neg-spend').value;
+  const minClicks = +document.getElementById('neg-clicks').value;
+
+  const zeroSales = data.filter(r => r.Sales === 0 && r.Spend >= minSpend && r.Clicks >= minClicks);
+  const highAcos  = data.filter(r => r.ACoS > 50 && r.Sales > 0 && r.Spend >= minSpend && r.Clicks >= minClicks);
+  const wastedSpend = zeroSales.reduce((s, r) => s + r.Spend, 0);
+  const totalTerms = [...new Set(data.map(r => r['Customer Search Term']))].length;
+
+  // Populate brand filter
+  const brands = ['all', ...new Set(data.map(r => r.Brand).filter(Boolean))].sort();
+  const brandSel = document.getElementById('neg-brand');
+  const currentBrand = brandSel.value;
+  brandSel.innerHTML = brands.map(b => `<option value="${b}">${b === 'all' ? 'All brands' : b}</option>`).join('');
+  if (brands.includes(currentBrand)) brandSel.value = currentBrand;
+
+  document.getElementById('neg-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total search terms</div><div class="metric-value">${totalTerms}</div></div>
+    <div class="metric-card"><div class="metric-label">Zero-sale terms</div><div class="metric-value red">${zeroSales.length}</div></div>
+    <div class="metric-card"><div class="metric-label">High ACoS terms</div><div class="metric-value amber">${highAcos.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Wasted spend</div><div class="metric-value red">₹${wastedSpend.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Neg. candidates</div><div class="metric-value accent">${zeroSales.length + highAcos.length}</div></div>
+  `;
+
+  // Update badge
+  const badge = document.getElementById('badge-neg');
+  const count = zeroSales.length + highAcos.length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline' : 'none';
+
+  renderNegTable();
+}
+
+function switchNegTab(tab, btn) {
+  NEG_TAB = tab;
+  negSelected.clear();
+  document.querySelectorAll('#page-neg .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderNegTable();
+}
+
+function getNegData() {
+  const minSpend  = +document.getElementById('neg-spend').value;
+  const minClicks = +document.getElementById('neg-clicks').value;
+  const brand     = document.getElementById('neg-brand').value;
+  const sortCol   = document.getElementById('neg-sort').value;
+  const searchQ   = (document.getElementById('neg-search').value || '').toLowerCase();
+
+  let data = STATE.kwData;
+  if (brand !== 'all') data = data.filter(r => r.Brand === brand);
+  if (searchQ) data = data.filter(r => (r['Customer Search Term'] || '').toLowerCase().includes(searchQ));
+
+  if (NEG_TAB === 'zero')    data = data.filter(r => r.Sales === 0 && r.Spend >= minSpend && r.Clicks >= minClicks);
+  else if (NEG_TAB === 'highacos') data = data.filter(r => r.ACoS > 50 && r.Sales > 0 && r.Spend >= minSpend && r.Clicks >= minClicks);
+  else data = data.filter(r => r.Spend >= minSpend && r.Clicks >= minClicks);
+
+  data.sort((a, b) => {
+    if (sortCol === 'ACoS') return (b.ACoS === -1 ? 99999 : b.ACoS) - (a.ACoS === -1 ? 99999 : a.ACoS);
+    return (b[sortCol] || 0) - (a[sortCol] || 0);
+  });
+  return data;
+}
+
+function getReason(row) {
+  if (row.Sales === 0) return { label: 'Zero sales', cls: 'red' };
+  if (row.ACoS > 100)  return { label: 'ACoS >100%', cls: 'red' };
+  if (row.ACoS > 50)   return { label: 'ACoS >50%', cls: 'amber' };
+  return { label: 'Low ROI', cls: 'amber' };
+}
+
+function renderNegTable() {
+  const data = getNegData();
+  if (!data.length) {
+    document.getElementById('neg-tbody').innerHTML = `<tr><td colspan="9" style="padding:0"><div class="empty-state">No terms match current filters.</div></td></tr>`;
+    updateNegActionBar();
+    return;
+  }
+
+  const rows = data.map((r, i) => {
+    const reason = getReason(r);
+    const key = r['Customer Search Term'] + '|||' + r['Campaign Name'];
+    const checked = negSelected.has(key) ? 'checked' : '';
+    const acos = r.ACoS === -1 ? '<span style="color:var(--text3)">—</span>' : r.ACoS + '%';
+    return `<tr>
+      <td title="${r['Customer Search Term']}">${r['Customer Search Term'] || '—'}</td>
+      <td class="text2">${r.Brand || '—'}</td>
+      <td class="text2" title="${r['Campaign Name']}">${(r['Campaign Name'] || '').replace('HM | SP | ', '')}</td>
+      <td style="text-align:right" class="mono">₹${r.Spend.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${r.Clicks}</td>
+      <td style="text-align:right" class="mono">${r.Orders}</td>
+      <td style="text-align:right" class="mono">${acos}</td>
+      <td><span class="badge ${reason.cls}">${reason.label}</span></td>
+      <td style="text-align:center"><input type="checkbox" ${checked} onchange="toggleNeg(this,'${key.replace(/'/g,"\\'")}')"></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('neg-tbody').innerHTML = rows;
+  updateNegActionBar();
+}
+
+function toggleNeg(cb, key) {
+  if (cb.checked) negSelected.add(key);
+  else negSelected.delete(key);
+  updateNegActionBar();
+  const all = getNegData();
+  document.getElementById('neg-select-all').checked = negSelected.size === all.length;
+}
+
+function toggleAllNeg(cb) {
+  const data = getNegData();
+  if (cb.checked) data.forEach(r => negSelected.add(r['Customer Search Term'] + '|||' + r['Campaign Name']));
+  else negSelected.clear();
+  renderNegTable();
+}
+
+function updateNegActionBar() {
+  const bar = document.getElementById('neg-action-bar');
+  const count = negSelected.size;
+  document.getElementById('neg-selected-count').textContent = count + ' selected';
+  bar.style.display = count > 0 ? 'flex' : 'none';
+}
+
+function buildNegCSV(rows) {
+  const matchType = document.getElementById('neg-match').value;
+  const headers = ['Campaign Name', 'Ad Group Name', 'Customer Search Term', 'Match Type', 'Spend', 'Clicks', 'Orders', 'Reason'];
+  const csvRows = rows.map(r => {
+    const reason = getReason(r);
+    return [
+      r['Campaign Name'] || '',
+      r['Ad Group Name'] || '',
+      r['Customer Search Term'] || '',
+      matchType,
+      r.Spend.toFixed(2),
+      r.Clicks,
+      r.Orders,
+      reason.label,
+    ].map(v => `"${v}"`).join(',');
+  });
+  return [headers.join(','), ...csvRows].join('\n');
+}
+
+function exportNegCSV() {
+  const data = getNegData();
+  const csv = buildNegCSV(data);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clarix-neg-kw-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function exportSelectedNeg() {
+  const data = getNegData().filter(r => negSelected.has(r['Customer Search Term'] + '|||' + r['Campaign Name']));
+  const csv = buildNegCSV(data);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clarix-neg-kw-selected-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+
+// ─── PLACEMENT BID LOGIC ─────────────────────────────────────────────────────
+const PLACEMENT_LABELS = {
+  'top of search on amazon': 'Top of Search',
+  'rest of search on amazon': 'Rest of Search',
+  'product pages on amazon': 'Product Pages',
+};
+const PLACEMENT_SHORT = { 'Top of Search': 'ToS', 'Rest of Search': 'RoS', 'Product Pages': 'PP' };
+
+function normalizePlacement(p) {
+  return PLACEMENT_LABELS[(p || '').toLowerCase()] || p || 'Unknown';
+}
+function placementStatus(acos, target) {
+  if (acos === -1 || acos === 0) return { label: 'No sales', cls: 'red' };
+  if (acos < target * 0.6)  return { label: 'Scale up', cls: 'green' };
+  if (acos <= target * 1.1) return { label: 'On target', cls: 'gray' };
+  if (acos <= target * 1.6) return { label: 'Reduce bid', cls: 'amber' };
+  return { label: 'Pause', cls: 'red' };
+}
+function calcModifier(acos, target) {
+  if (acos <= 0 || acos === -1) return null;
+  const mod = ((target / acos) - 1) * 100;
+  return Math.max(-99, Math.min(900, Math.round(mod)));
+}
+function updatePlacementPage() {
+  document.getElementById('plc-acos-val').textContent = document.getElementById('plc-acos').value + '%';
+  renderPlacementPage();
+}
+function renderPlacementPage() {
+  const data = STATE.placementData;
+  if (!data.length) return;
+  const target = +document.getElementById('plc-acos').value;
+  const brands = ['all', ...new Set(data.map(r => r.Brand).filter(b => b && b !== '#ERROR!'))].sort();
+  const brandSel = document.getElementById('plc-brand');
+  const curBrand = brandSel.value;
+  brandSel.innerHTML = brands.map(b => `<option value="${b}">${b === 'all' ? 'All brands' : b}</option>`).join('');
+  if (brands.includes(curBrand)) brandSel.value = curBrand;
+
+  const byPlacement = {};
+  data.forEach(r => {
+    const p = normalizePlacement(r.Placement);
+    if (!byPlacement[p]) byPlacement[p] = { Spend:0, Sales:0, Orders:0, Clicks:0, Impressions:0 };
+    byPlacement[p].Spend += r.Spend||0; byPlacement[p].Sales += r.Sales||0;
+    byPlacement[p].Orders += r.Orders||0; byPlacement[p].Clicks += r.Clicks||0;
+    byPlacement[p].Impressions += r.Impressions||0;
+  });
+
+  const PLACEMENT_ORDER = ['Top of Search', 'Rest of Search', 'Product Pages'];
+  const PLACEMENT_COLOR = { 'Top of Search': 'green', 'Rest of Search': 'amber', 'Product Pages': 'red' };
+
+  document.getElementById('plc-summary').innerHTML = PLACEMENT_ORDER.map(p => {
+    const d = byPlacement[p] || {};
+    const acos = d.Sales > 0 ? (d.Spend/d.Sales*100).toFixed(1) : null;
+    const ctr  = d.Impressions > 0 ? (d.Clicks/d.Impressions*100).toFixed(2) : '—';
+    const mod  = acos ? calcModifier(+acos, target) : null;
+    const cls  = PLACEMENT_COLOR[p] || 'gray';
+    const modText = mod !== null ? (mod >= 0 ? '+'+mod+'%' : mod+'%') : '—';
+    const acosColor = acos ? (+acos > target ? 'red' : +acos < target*0.6 ? 'green' : 'text') : 'text3';
+    return `<div class="metric-card" style="border-top:3px solid var(--${cls})">
+      <div class="metric-label">${p}</div>
+      <div style="display:flex;gap:16px;margin-top:4px;flex-wrap:wrap">
+        <div><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">ACoS</div><div style="font-size:22px;font-weight:700;color:var(--${acosColor})">${acos?acos+'%':'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">Spend</div><div style="font-size:22px;font-weight:700">₹${(d.Spend||0).toFixed(0)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">Orders</div><div style="font-size:22px;font-weight:700">${d.Orders||0}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">CTR</div><div style="font-size:22px;font-weight:700">${ctr}%</div></div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;font-family:var(--font-mono);color:var(--text3)">Recommended modifier</span>
+        <span style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--${mod!==null&&mod>0?'green':mod!==null&&mod<0?'red':'text3'})">${modText}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const needsAction = PLACEMENT_ORDER.filter(p => {
+    const d = byPlacement[p]||{}; const acos = d.Sales>0?d.Spend/d.Sales*100:-1;
+    return acos===-1||acos>target*1.1||acos<target*0.6;
+  }).length;
+  const badge = document.getElementById('badge-placement');
+  badge.textContent = needsAction; badge.style.display = needsAction>0?'inline':'none';
+  renderPlacementTable();
+}
+function renderPlacementTable() {
+  const target  = +document.getElementById('plc-acos').value;
+  const searchQ = (document.getElementById('plc-search').value||'').toLowerCase();
+  const brand   = document.getElementById('plc-brand').value;
+  const sortCol = document.getElementById('plc-sort').value;
+  let data = STATE.placementData.map(r => ({...r, PlacementNorm: normalizePlacement(r.Placement), CTR: r.Impressions>0?+(r.Clicks/r.Impressions*100).toFixed(2):0}));
+  if (brand !== 'all') data = data.filter(r => r.Brand===brand);
+  if (searchQ) data = data.filter(r => (r['Campaign Name']||'').toLowerCase().includes(searchQ));
+  data.sort((a,b) => sortCol==='ACoS'?(b.ACoS===-1?99999:b.ACoS)-(a.ACoS===-1?99999:a.ACoS):(b[sortCol]||0)-(a[sortCol]||0));
+  if (!data.length) {
+    document.getElementById('plc-tbody').innerHTML=`<tr><td colspan="10" style="padding:0"><div class="empty-state">No placement data. Make sure the file has a Placement Report sheet.</div></td></tr>`;
+    return;
+  }
+  const rows = data.map(r => {
+    const status = placementStatus(r.ACoS, target);
+    const mod    = r.ACoS>0?calcModifier(r.ACoS,target):null;
+    const modText = mod!==null?(mod>=0?'+'+mod+'%':mod+'%'):'—';
+    const modCls  = mod!==null&&mod>0?'up':mod!==null&&mod<0?'down':'';
+    const acos = r.ACoS===-1?'<span style="color:var(--text3)">—</span>':r.ACoS+'%';
+    const brand = (r.Brand||'—')==='#ERROR!'?'—':(r.Brand||'—');
+    return `<tr>
+      <td title="${r['Campaign Name']}">${(r['Campaign Name']||'').replace('HM | SP | ','')}</td>
+      <td class="text2">${brand}</td>
+      <td><span style="font-size:11px;font-family:var(--font-mono);padding:2px 7px;border-radius:4px;background:var(--bg3)">${PLACEMENT_SHORT[r.PlacementNorm]||r.PlacementNorm}</span></td>
+      <td style="text-align:right" class="mono">₹${(r.Spend||0).toFixed(0)}</td>
+      <td style="text-align:right" class="mono">₹${(r.Sales||0).toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${r.Orders||0}</td>
+      <td style="text-align:right" class="mono">${acos}</td>
+      <td style="text-align:right" class="mono">${r.CTR.toFixed(2)}%</td>
+      <td><span class="badge ${status.cls}">${status.label}</span></td>
+      <td style="text-align:right"><span class="rec-bid ${modCls}">${modText}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('plc-tbody').innerHTML = rows;
+}
+function exportPlacementCSV() {
+  const target = +document.getElementById('plc-acos').value;
+  const headers = ['Campaign Name','Brand','Placement','Spend','Sales','Orders','ACoS','CTR%','Status','Recommended Modifier'];
+  const rows = STATE.placementData.map(r => {
+    const status = placementStatus(r.ACoS, target);
+    const mod = r.ACoS>0?calcModifier(r.ACoS,target):null;
+    const modText = mod!==null?(mod>=0?'+'+mod+'%':mod+'%'):'—';
+    const ctr = r.Impressions>0?(r.Clicks/r.Impressions*100).toFixed(2):'0';
+    return [r['Campaign Name']||'',r.Brand||'',normalizePlacement(r.Placement),(r.Spend||0).toFixed(2),(r.Sales||0).toFixed(2),r.Orders||0,r.ACoS===-1?'No sales':(r.ACoS||0)+'%',ctr+'%',status.label,modText].map(v=>`"${v}"`).join(',');
+  });
+  const csv = [headers.join(','),...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clarix-placement-bids-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+
+// ─── PERFORMANCE SUMMARY LOGIC ───────────────────────────────────────────────
+let perfChartSpend = null;
+let perfChartAcos  = null;
+
+function getWeekKey(dateVal) {
+  const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
+  if (isNaN(d)) return 'Unknown';
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d); mon.setDate(diff);
+  return mon.toISOString().slice(0, 10);
+}
+
+function getMonthKey(dateVal) {
+  const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
+  if (isNaN(d)) return 'Unknown';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function getPerfSourceData() {
+  const src = document.getElementById('perf-source').value;
+  if (src === 'asin') return STATE.rawAsin || [];
+  if (src === 'str')  return STATE.rawKw || [];
+  return STATE.rawPlacement || [];
+}
+
+function getBrandField(src) {
+  if (src === 'asin') return null;
+  return 'Brand';
+}
+
+function renderPerfPage() {
+  const period  = document.getElementById('perf-period').value;
+  const src     = document.getElementById('perf-source').value;
+  const rawData = getPerfSourceData();
+  if (!rawData.length) return;
+
+  // Build brand filter
+  const brandField = getBrandField(src);
+  const brands = ['all'];
+  if (brandField) {
+    const bset = new Set(rawData.map(r => r[brandField]).filter(b => b && b !== '#ERROR!'));
+    [...bset].sort().forEach(b => brands.push(b));
+  }
+  const brandSel = document.getElementById('perf-brand');
+  const curBrand = brandSel.value;
+  brandSel.innerHTML = brands.map(b => `<option value="${b}">${b === 'all' ? 'All brands' : b}</option>`).join('');
+  if (brands.includes(curBrand)) brandSel.value = curBrand;
+  const selBrand = brandSel.value;
+
+  let data = rawData;
+  if (selBrand !== 'all' && brandField) data = data.filter(r => r[brandField] === selBrand);
+
+  // Group by period
+  const keyFn = period === 'week' ? getWeekKey : getMonthKey;
+  const groups = {};
+  data.forEach(r => {
+    const k = keyFn(r.Date || r['Date']);
+    if (!groups[k]) groups[k] = { Spend: 0, Sales: 0, Orders: 0, Clicks: 0, Impressions: 0 };
+    groups[k].Spend       += Number(r.Spend) || 0;
+    groups[k].Sales       += Number(r['14 Day Total Sales'] || r.Sales) || 0;
+    groups[k].Orders      += Number(r['14 Day Total Orders (#)'] || r.Orders) || 0;
+    groups[k].Clicks      += Number(r.Clicks) || 0;
+    groups[k].Impressions += Number(r.Impressions) || 0;
+  });
+
+  const periods = Object.keys(groups).filter(k => k !== 'Unknown').sort();
+  const rows = periods.map(p => {
+    const d = groups[p];
+    const acos = d.Sales > 0 ? +(d.Spend / d.Sales * 100).toFixed(1) : null;
+    const roas = d.Spend > 0 ? +(d.Sales / d.Spend).toFixed(2) : null;
+    const ctr  = d.Impressions > 0 ? +(d.Clicks / d.Impressions * 100).toFixed(2) : null;
+    const cpc  = d.Clicks > 0 ? +(d.Spend / d.Clicks).toFixed(2) : null;
+    const cvr  = d.Clicks > 0 ? +(d.Orders / d.Clicks * 100).toFixed(2) : null;
+    return { period: p, ...d, acos, roas, ctr, cpc, cvr };
+  });
+
+  // Overall KPIs
+  const totalSpend  = rows.reduce((s, r) => s + r.Spend, 0);
+  const totalSales  = rows.reduce((s, r) => s + r.Sales, 0);
+  const totalOrders = rows.reduce((s, r) => s + r.Orders, 0);
+  const totalClicks = rows.reduce((s, r) => s + r.Clicks, 0);
+  const overallAcos = totalSales > 0 ? (totalSpend / totalSales * 100).toFixed(1) : '—';
+  const overallRoas = totalSpend > 0 ? (totalSales / totalSpend).toFixed(2) : '—';
+
+  document.getElementById('perf-kpis').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total Spend</div><div class="metric-value accent">₹${totalSpend.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total Sales</div><div class="metric-value green">₹${totalSales.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total Orders</div><div class="metric-value">${totalOrders}</div></div>
+    <div class="metric-card"><div class="metric-label">Overall ACoS</div><div class="metric-value ${overallAcos !== '—' && +overallAcos > 30 ? 'red' : 'amber'}">${overallAcos}${overallAcos !== '—' ? '%' : ''}</div></div>
+    <div class="metric-card"><div class="metric-label">Overall ROAS</div><div class="metric-value">${overallRoas}x</div></div>
+    <div class="metric-card"><div class="metric-label">Total Clicks</div><div class="metric-value">${totalClicks}</div></div>
+  `;
+
+  // Charts
+  const labels = rows.map(r => period === 'week' ? 'W/' + r.period.slice(5) : r.period);
+  const spendArr = rows.map(r => +r.Spend.toFixed(0));
+  const salesArr = rows.map(r => +r.Sales.toFixed(0));
+  const acosArr  = rows.map(r => r.acos || 0);
+
+  if (perfChartSpend) { perfChartSpend.destroy(); perfChartSpend = null; }
+  if (perfChartAcos)  { perfChartAcos.destroy();  perfChartAcos = null; }
+
+  const spendCtx = document.getElementById('perf-chart-spend');
+  const acosCtx  = document.getElementById('perf-chart-acos');
+
+  if (spendCtx) {
+    perfChartSpend = new Chart(spendCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Spend', data: spendArr, backgroundColor: 'rgba(0,113,227,0.75)', borderRadius: 4 },
+          { label: 'Sales', data: salesArr, backgroundColor: 'rgba(76,217,100,0.7)', borderRadius: 4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, labels: { color: '#6e6e73', font: { size: 11 }, boxWidth: 10 } } },
+        scales: {
+          x: { ticks: { color: '#aeaeb2', font: { size: 10 }, autoSkip: false, maxRotation: 45 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { ticks: { color: '#aeaeb2', font: { size: 10 }, callback: v => '₹' + v.toLocaleString() }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+      }
+    });
+  }
+
+  if (acosCtx) {
+    perfChartAcos = new Chart(acosCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label: 'ACoS %', data: acosArr, borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.1)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f5a623', fill: true }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#aeaeb2', font: { size: 10 }, autoSkip: false, maxRotation: 45 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { ticks: { color: '#aeaeb2', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+      }
+    });
+  }
+
+  // Table
+  const tableRows = rows.map((r, i) => {
+    const prev = i > 0 ? rows[i - 1] : null;
+    const acosDelta = prev && prev.acos && r.acos ? (r.acos - prev.acos).toFixed(1) : null;
+    const spendDelta = prev ? (((r.Spend - prev.Spend) / prev.Spend) * 100).toFixed(1) : null;
+    let trendHtml = '—';
+    if (spendDelta !== null) {
+      const up = +spendDelta > 0;
+      trendHtml = `<span style="color:var(--${up ? 'amber' : 'green'});font-family:var(--font-mono);font-size:11px">
+        ${up ? '▲' : '▼'} ${Math.abs(spendDelta)}% spend${acosDelta ? ` · ACoS ${acosDelta > 0 ? '+' : ''}${acosDelta}%` : ''}
+      </span>`;
+    }
+    return `<tr>
+      <td class="mono" style="font-weight:500">${r.period}</td>
+      <td style="text-align:right" class="mono">₹${r.Spend.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">₹${r.Sales.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${r.Orders}</td>
+      <td style="text-align:right" class="mono ${r.acos && r.acos > 30 ? 'red' : ''}">${r.acos ? r.acos + '%' : '—'}</td>
+      <td style="text-align:right" class="mono">${r.roas ? r.roas + 'x' : '—'}</td>
+      <td style="text-align:right" class="mono">${r.Clicks}</td>
+      <td style="text-align:right" class="mono">${r.ctr ? r.ctr + '%' : '—'}</td>
+      <td style="text-align:right" class="mono">${r.cvr ? r.cvr + '%' : '—'}</td>
+      <td style="text-align:right" class="mono">${r.cpc ? '₹' + r.cpc : '—'}</td>
+      <td>${trendHtml}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('perf-tbody').innerHTML = tableRows || `<tr><td colspan="10" style="padding:0"><div class="empty-state">No dated data found.</div></td></tr>`;
+  STATE._perfRows = rows;
+}
+
+function exportPerfCSV() {
+  const rows = STATE._perfRows || [];
+  const headers = ['Period','Spend','Sales','Orders','ACoS','ROAS','Clicks','CTR%','CPC'];
+  const csvRows = rows.map(r => [
+    r.period, r.Spend.toFixed(2), r.Sales.toFixed(2), r.Orders,
+    r.acos ? r.acos + '%' : '—', r.roas ? r.roas + 'x' : '—',
+    r.Clicks, r.ctr ? r.ctr + '%' : '—', r.cpc ? r.cpc : '—'
+  ].map(v => `"${v}"`).join(','));
+  const csv = [headers.join(','), ...csvRows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `clarix-perf-summary-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+
+// ─── BUDGET PACING LOGIC ─────────────────────────────────────────────────────
+let budgetChart = null;
+let campaignBudgets = {}; // user-set per-campaign budgets
+
+function updateBudgetControls() {
+  const v = document.getElementById('budget-alert-pct').value;
+  document.getElementById('budget-alert-val').textContent = '±' + v + '%';
+  renderBudgetPage();
+}
+
+function initBudgetMonths() {
+  const raw = STATE.rawAsin || [];
+  const months = [...new Set(raw.map(r => {
+    const d = r.Date instanceof Date ? r.Date : new Date(r.Date);
+    if (isNaN(d)) return null;
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }).filter(Boolean))].sort();
+  const sel = document.getElementById('budget-month');
+  if (!sel) return;
+  sel.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (months.length) sel.value = months[months.length - 1];
+}
+
+function getDaysInMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+function renderBudgetPage() {
+  // Use rawAsin as the authoritative spend source.
+  // STR and Placement reports contain the SAME spend broken down differently —
+  // summing all three would triple-count. ASIN report is the campaign-level source of truth.
+  const raw = STATE.rawAsin || [];
+  if (!raw.length) return;
+
+  // Init month selector if empty
+  const sel = document.getElementById('budget-month');
+  if (sel && !sel.options.length) initBudgetMonths();
+
+  const selMonth   = sel ? sel.value : '';
+  const totalBudget = +(document.getElementById('budget-total').value.replace(/[^0-9.]/g,'')) || 50000;
+  const alertPct   = +(document.getElementById('budget-alert-pct').value) / 100;
+
+  // Filter to selected month
+  const monthData = raw.filter(r => {
+    const d = r.Date instanceof Date ? r.Date : new Date(r.Date);
+    if (isNaN(d)) return false;
+    const ym = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    return ym === selMonth;
+  });
+
+  // Daily spend
+  const dailyMap = {};
+  monthData.forEach(r => {
+    const d = r.Date instanceof Date ? r.Date : new Date(r.Date);
+    const key = d.toISOString().slice(0,10);
+    dailyMap[key] = (dailyMap[key] || 0) + (Number(r.Spend) || 0);
+  });
+  const sortedDays = Object.keys(dailyMap).sort();
+  const totalDays  = getDaysInMonth(selMonth);
+  const daysSoFar  = sortedDays.length;
+  const actualSpend = Object.values(dailyMap).reduce((s,v) => s+v, 0);
+  const dailyAvg   = daysSoFar > 0 ? actualSpend / daysSoFar : 0;
+  const projected  = dailyAvg * totalDays;
+  const remaining  = totalBudget - actualSpend;
+  const pacePct    = totalBudget > 0 ? (actualSpend / totalBudget * 100) : 0;
+  const idealPct   = (daysSoFar / totalDays) * 100;
+  const variance   = pacePct - idealPct;
+
+  // Status
+  let pacingStatus, pacingCls;
+  if (Math.abs(variance) <= alertPct * 100) { pacingStatus = 'On pace'; pacingCls = 'green'; }
+  else if (variance > 0) { pacingStatus = 'Overspending'; pacingCls = 'red'; }
+  else { pacingStatus = 'Underspending'; pacingCls = 'amber'; }
+
+  // Badge
+  const badge = document.getElementById('badge-budget');
+  badge.textContent = pacingStatus !== 'On pace' ? '!' : '';
+  badge.style.display = pacingStatus !== 'On pace' ? 'inline' : 'none';
+
+  // KPI cards
+  document.getElementById('budget-kpis').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Monthly Budget</div><div class="metric-value accent">₹${totalBudget.toLocaleString()}</div></div>
+    <div class="metric-card"><div class="metric-label">Spent so far</div><div class="metric-value">₹${actualSpend.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Remaining</div><div class="metric-value ${remaining < 0 ? 'red' : 'green'}">₹${remaining.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Projected EOM</div><div class="metric-value ${projected > totalBudget*1.1 ? 'red' : projected < totalBudget*0.85 ? 'amber' : 'green'}">₹${projected.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Daily avg</div><div class="metric-value">₹${dailyAvg.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Pacing status</div><div class="metric-value ${pacingCls}" style="font-size:18px">${pacingStatus}</div></div>
+  `;
+
+  // Pacing bar
+  const barW = Math.min(100, pacePct).toFixed(1);
+  const idealW = Math.min(100, idealPct).toFixed(1);
+  document.getElementById('clarix-budget-pacing-bar').innerHTML = `
+    <div style="position:relative;height:36px;background:var(--bg3);border-radius:6px;overflow:hidden;margin-bottom:8px">
+      <div style="position:absolute;left:0;top:0;height:100%;width:${barW}%;background:var(--${pacingCls});opacity:0.8;border-radius:6px;transition:width 0.4s"></div>
+      <div style="position:absolute;left:${idealW}%;top:0;height:100%;width:2px;background:var(--text3)"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 12px;justify-content:space-between">
+        <span style="font-size:12px;font-family:var(--font-mono);font-weight:500;color:#fff">₹${actualSpend.toFixed(0)} spent (${pacePct.toFixed(1)}%)</span>
+        <span style="font-size:11px;font-family:var(--font-mono);color:var(--text3)">ideal: ${idealPct.toFixed(1)}%</span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-mono);color:var(--text3)">
+      <span>Day 1</span><span>Day ${daysSoFar} of ${totalDays}</span><span>Day ${totalDays}</span>
+    </div>
+  `;
+
+  // Daily chart
+  const dailyBudget = totalBudget / totalDays;
+  const cumulativeActual = [];
+  const cumulativeIdeal  = [];
+  let runSum = 0;
+  sortedDays.forEach((d, i) => {
+    runSum += dailyMap[d];
+    cumulativeActual.push(+runSum.toFixed(0));
+    cumulativeIdeal.push(+((i + 1) * dailyBudget).toFixed(0));
+  });
+
+  if (budgetChart) { budgetChart.destroy(); budgetChart = null; }
+  const ctx = document.getElementById('budget-chart');
+  if (ctx) {
+    budgetChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: sortedDays.map(d => d.slice(5)),
+        datasets: [
+          { label: 'Actual spend', data: cumulativeActual, borderColor: '#0071e3', backgroundColor: 'rgba(0,113,227,0.08)', borderWidth: 2, tension: 0.2, fill: true, pointRadius: 3, pointBackgroundColor: '#0071e3' },
+          { label: 'Ideal pace',   data: cumulativeIdeal,  borderColor: '#d0d0d4', borderDash: [6,4], borderWidth: 1.5, tension: 0, fill: false, pointRadius: 0 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, labels: { color: '#6e6e73', font: { size: 11 }, boxWidth: 10 } } },
+        scales: {
+          x: { ticks: { color: '#aeaeb2', font: { size: 10 }, autoSkip: true, maxTicksLimit: 10 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { ticks: { color: '#aeaeb2', font: { size: 10 }, callback: v => '₹' + v.toLocaleString() }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+      }
+    });
+  }
+
+  // Campaign table — aggregate spend by campaign
+  const campMap = {};
+  monthData.forEach(r => {
+    const c = r['Campaign Name'] || 'Unknown';
+    if (!campMap[c]) campMap[c] = 0;
+    campMap[c] += Number(r.Spend) || 0;
+  });
+  const campaigns = Object.entries(campMap).sort((a,b) => b[1]-a[1]);
+
+  const campRows = campaigns.map(([name, spend]) => {
+    const campBudget = campaignBudgets[name] || 0;
+    const usedPct    = campBudget > 0 ? (spend / campBudget * 100).toFixed(1) : null;
+    const projectedC = daysSoFar > 0 ? (spend / daysSoFar * totalDays).toFixed(0) : '—';
+    const campAvg    = daysSoFar > 0 ? (spend / daysSoFar).toFixed(0) : '—';
+    let stCls = 'gray', stLabel = 'No budget set';
+    if (campBudget > 0) {
+      const p = +usedPct;
+      if (p > 100 + alertPct*100) { stCls = 'red'; stLabel = 'Over budget'; }
+      else if (p < idealPct * (1 - alertPct)) { stCls = 'amber'; stLabel = 'Under pace'; }
+      else { stCls = 'green'; stLabel = 'On pace'; }
+    }
+    const nameEsc = name.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    return `<tr>
+      <td title="${name}">${name.replace('HM | SP | ','')}</td>
+      <td style="text-align:right" class="mono">₹${spend.toFixed(0)}</td>
+      <td style="text-align:right">
+        <input type="text" value="${campBudget || ''}" placeholder="—" style="width:90px;text-align:right;font-family:var(--font-mono);font-size:12px"
+          onchange="setCampaignBudget('${nameEsc}', this.value)" oninput="setCampaignBudget('${nameEsc}', this.value)">
+      </td>
+      <td style="text-align:right" class="mono">${usedPct ? usedPct + '%' : '—'}</td>
+      <td style="text-align:right" class="mono">₹${projectedC}</td>
+      <td><span class="badge ${stCls}">${stLabel}</span></td>
+      <td style="text-align:right" class="mono">₹${campAvg}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('budget-tbody').innerHTML = campRows || `<tr><td colspan="7" style="padding:0"><div class="empty-state">No campaign data for this month.</div></td></tr>`;
+  STATE._budgetRows = { campaigns, totalBudget, actualSpend, projected, dailyAvg, daysSoFar, totalDays, pacingStatus };
+}
+
+function setCampaignBudget(name, val) {
+  const v = +(val.replace(/[^0-9.]/g,''));
+  if (v > 0) campaignBudgets[name] = v; else delete campaignBudgets[name];
+  renderBudgetPage();
+}
+
+function exportBudgetCSV() {
+  const d = STATE._budgetRows;
+  if (!d) return;
+  const headers = ['Campaign','Actual Spend','Campaign Budget','% Used','Projected EOM','Daily Avg'];
+  const rows = d.campaigns.map(([name, spend]) => {
+    const cb = campaignBudgets[name] || 0;
+    const used = cb > 0 ? (spend/cb*100).toFixed(1)+'%' : '—';
+    const proj = d.daysSoFar > 0 ? (spend/d.daysSoFar*d.totalDays).toFixed(0) : '—';
+    const avg  = d.daysSoFar > 0 ? (spend/d.daysSoFar).toFixed(0) : '—';
+    return [name, spend.toFixed(2), cb||'—', used, proj, avg].map(v=>`"${v}"`).join(',');
+  });
+  const summary = `\n"Monthly Budget","${d.totalBudget}"\n"Actual Spend","${d.actualSpend.toFixed(2)}"\n"Projected EOM","${d.projected.toFixed(2)}"\n"Status","${d.pacingStatus}"`;
+  const csv = [headers.join(','), ...rows, summary].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `clarix-budget-pacing-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+
+// ─── SEARCH TERM HARVESTING ──────────────────────────────────────────────────
+let HARV_TAB = 'new';
+let harvSelected = new Set();
+
+function updateHarvestControls() {
+  document.getElementById('harv-orders-val').textContent = document.getElementById('harv-orders').value;
+  document.getElementById('harv-acos-val').textContent   = document.getElementById('harv-acos').value + '%';
+  renderHarvestPage();
+}
+
+function renderHarvestPage() {
+  const kw = STATE.kwData || [];
+  if (!kw.length) return;
+  const minOrders = +document.getElementById('harv-orders').value;
+  const maxAcos   = +document.getElementById('harv-acos').value;
+
+  // Candidates: converting terms within ACoS threshold, not already in ASIN exact match
+  const converting = kw.filter(r => r.Orders >= minOrders && r.ACoS > 0 && r.ACoS <= maxAcos);
+  const existing   = kw.filter(r => (r['Match Type'] || '').toUpperCase() === 'EXACT' && r.Orders >= 1);
+  const existingSet = new Set(existing.map(r => (r['Customer Search Term'] || '').toLowerCase()));
+
+  const newCandidates = converting.filter(r => !existingSet.has((r['Customer Search Term'] || '').toLowerCase()));
+
+  // Populate brand filter
+  const brands = ['all', ...new Set(kw.map(r => r.Brand).filter(b => b && b !== '#ERROR!'))].sort();
+  const brandSel = document.getElementById('harv-brand');
+  const curBrand = brandSel.value;
+  brandSel.innerHTML = brands.map(b => `<option value="${b}">${b === 'all' ? 'All brands' : b}</option>`).join('');
+  if (brands.includes(curBrand)) brandSel.value = curBrand;
+
+  document.getElementById('harv-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Converting terms</div><div class="metric-value accent">${converting.length}</div></div>
+    <div class="metric-card"><div class="metric-label">New candidates</div><div class="metric-value green">${newCandidates.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Already exact</div><div class="metric-value">${existing.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Total orders from new</div><div class="metric-value">${newCandidates.reduce((s,r)=>s+r.Orders,0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Sales from new</div><div class="metric-value green">₹${newCandidates.reduce((s,r)=>s+r.Sales,0).toFixed(0)}</div></div>
+  `;
+
+  const badge = document.getElementById('badge-harvest');
+  badge.textContent = newCandidates.length;
+  badge.style.display = newCandidates.length > 0 ? 'inline' : 'none';
+
+  renderHarvestTable();
+}
+
+function getHarvestData() {
+  const kw = STATE.kwData || [];
+  const minOrders = +document.getElementById('harv-orders').value;
+  const maxAcos   = +document.getElementById('harv-acos').value;
+  const brand     = document.getElementById('harv-brand').value;
+  const sortCol   = document.getElementById('harv-sort').value;
+  const searchQ   = (document.getElementById('harv-search').value || '').toLowerCase();
+
+  const existing   = kw.filter(r => (r['Match Type'] || '').toUpperCase() === 'EXACT' && r.Orders >= 1);
+  const existingSet = new Set(existing.map(r => (r['Customer Search Term'] || '').toLowerCase()));
+
+  let data = kw.filter(r => r.Orders >= minOrders && r.ACoS > 0 && r.ACoS <= maxAcos);
+  if (HARV_TAB === 'new')      data = data.filter(r => !existingSet.has((r['Customer Search Term']||'').toLowerCase()));
+  if (HARV_TAB === 'existing') data = existing;
+  if (brand !== 'all') data = data.filter(r => r.Brand === brand);
+  if (searchQ) data = data.filter(r => (r['Customer Search Term']||'').toLowerCase().includes(searchQ));
+  data.sort((a,b) => {
+    if (sortCol === 'ACoS') return a.ACoS - b.ACoS;
+    if (sortCol === 'CVR')  return (b.CVR||0) - (a.CVR||0);
+    return (b[sortCol]||0) - (a[sortCol]||0);
+  });
+  return data;
+}
+
+function switchHarvTab(tab, btn) {
+  HARV_TAB = tab; harvSelected.clear();
+  document.querySelectorAll('#page-harvest .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHarvestTable();
+}
+
+function renderHarvestTable() {
+  const data = getHarvestData();
+  const matchType = document.getElementById('harv-match').value;
+  if (!data.length) {
+    document.getElementById('harv-tbody').innerHTML = `<tr><td colspan="9" style="padding:0"><div class="empty-state">No terms match current filters.</div></td></tr>`;
+    updateHarvActionBar(); return;
+  }
+  const rows = data.map(r => {
+    const key = (r['Customer Search Term']||'') + '|||' + (r['Campaign Name']||'');
+    const checked = harvSelected.has(key) ? 'checked' : '';
+    const cvr = r.CVR > 0 ? r.CVR + '%' : '<span style="color:var(--text3)">—</span>';
+    return `<tr>
+      <td title="${r['Customer Search Term']}">${r['Customer Search Term']||'—'}</td>
+      <td class="text2">${r.Brand||'—'}</td>
+      <td class="text2" title="${r['Campaign Name']}">${(r['Campaign Name']||'').replace('HM | SP | ','')}</td>
+      <td style="text-align:right" class="mono">${r.Orders}</td>
+      <td style="text-align:right" class="mono">₹${(r.Sales||0).toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${r.ACoS}%</td>
+      <td style="text-align:right" class="mono">${cvr}</td>
+      <td style="text-align:right" class="mono">${r.Clicks||0}</td>
+      <td><span class="badge green" style="font-size:10px">${matchType}</span></td>
+      <td style="text-align:center"><input type="checkbox" ${checked} onchange="toggleHarv(this,'${key.replace(/'/g,"\\'")}')"></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('harv-tbody').innerHTML = rows;
+  document.getElementById('harv-select-all').checked = harvSelected.size === data.length && data.length > 0;
+  updateHarvActionBar();
+}
+
+function toggleHarv(cb, key) {
+  if (cb.checked) harvSelected.add(key); else harvSelected.delete(key);
+  updateHarvActionBar();
+  const all = getHarvestData();
+  document.getElementById('harv-select-all').checked = harvSelected.size === all.length;
+}
+
+function toggleAllHarv(cb) {
+  const data = getHarvestData();
+  if (cb.checked) data.forEach(r => harvSelected.add((r['Customer Search Term']||'')+'|||'+(r['Campaign Name']||'')));
+  else harvSelected.clear();
+  renderHarvestTable();
+}
+
+function updateHarvActionBar() {
+  const bar = document.getElementById('harv-action-bar');
+  document.getElementById('harv-selected-count').textContent = harvSelected.size + ' selected';
+  bar.style.display = harvSelected.size > 0 ? 'flex' : 'none';
+}
+
+function buildHarvestCSV(rows) {
+  const matchType = document.getElementById('harv-match').value;
+  const headers = ['Campaign Name', 'Ad Group Name', 'Keyword', 'Match Type', 'Orders', 'Sales', 'ACoS', 'CVR%', 'Clicks'];
+  const csvRows = rows.map(r => [
+    r['Campaign Name']||'', r['Ad Group Name']||'', r['Customer Search Term']||'',
+    matchType, r.Orders, (r.Sales||0).toFixed(2), r.ACoS+'%',
+    r.CVR > 0 ? r.CVR + '%' : '—', r.Clicks||0
+  ].map(v=>`"${v}"`).join(','));
+  return [headers.join(','), ...csvRows].join('\n');
+}
+
+function exportHarvestCSV() {
+  const csv = buildHarvestCSV(getHarvestData());
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `clarix-kw-harvest-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+function exportSelectedHarv() {
+  const data = getHarvestData().filter(r => harvSelected.has((r['Customer Search Term']||'')+'|||'+(r['Campaign Name']||'')));
+  const csv = buildHarvestCSV(data);
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `clarix-kw-harvest-selected-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ─── BRAND DASHBOARD ─────────────────────────────────────────────────────────
+function updateBrandControls() {
+  document.getElementById('brand-acos-val').textContent = document.getElementById('brand-acos-target').value + '%';
+  renderBrandPage();
+}
+
+function renderBrandPage() {
+  const kw = STATE.kwData || [];
+  if (!kw.length) return;
+
+  const target  = +document.getElementById('brand-acos-target').value;
+  const sortCol = document.getElementById('brand-sort').value;
+
+  // Aggregate by brand
+  const brandMap = {};
+  kw.forEach(r => {
+    const b = r.Brand;
+    if (!b || b === '#ERROR!') return;
+    if (!brandMap[b]) brandMap[b] = { Spend:0, Sales:0, Orders:0, Clicks:0, Impressions:0 };
+    brandMap[b].Spend       += Number(r.Spend)||0;
+    brandMap[b].Sales       += Number(r.Sales)||0;
+    brandMap[b].Orders      += Number(r.Orders)||0;
+    brandMap[b].Clicks      += Number(r.Clicks)||0;
+    brandMap[b].Impressions += Number(r.Impressions)||0;
+  });
+
+  let brands = Object.entries(brandMap).map(([name, d]) => ({
+    name, ...d,
+    ACoS: d.Sales > 0 ? +(d.Spend/d.Sales*100).toFixed(1) : -1,
+    ROAS: d.Spend > 0 ? +(d.Sales/d.Spend).toFixed(2) : 0,
+    CTR:  d.Impressions > 0 ? +(d.Clicks/d.Impressions*100).toFixed(2) : 0,
+    CPC:  d.Clicks > 0 ? +(d.Spend/d.Clicks).toFixed(2) : 0,
+    CVR:  d.Clicks > 0 ? +(d.Orders/d.Clicks*100).toFixed(2) : 0,
+  }));
+
+  brands.sort((a,b) => sortCol==='ACoS'
+    ? (b.ACoS===-1?-1:b.ACoS)-(a.ACoS===-1?-1:a.ACoS)
+    : (b[sortCol]||0)-(a[sortCol]||0));
+
+  // Health score: 0-100 based on ACoS vs target, orders, ROAS
+  function healthScore(b) {
+    if (b.ACoS === -1) return 0;
+    let score = 50;
+    if (b.ACoS < target * 0.5) score += 30;
+    else if (b.ACoS < target) score += 15;
+    else if (b.ACoS > target * 1.5) score -= 25;
+    else if (b.ACoS > target) score -= 10;
+    if (b.Orders > 5) score += 10;
+    if (b.ROAS > 3) score += 10;
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function healthLabel(score) {
+    if (score >= 75) return { label: 'Excellent', cls: 'green' };
+    if (score >= 55) return { label: 'Good', cls: 'green' };
+    if (score >= 35) return { label: 'Fair', cls: 'amber' };
+    return { label: 'Poor', cls: 'red' };
+  }
+
+  // Scorecards
+  document.getElementById('brand-cards').innerHTML = brands.map(b => {
+    const score = healthScore(b);
+    const h = healthLabel(score);
+    const acosColor = b.ACoS === -1 ? 'text3' : b.ACoS > target ? 'red' : b.ACoS < target*0.6 ? 'green' : 'amber';
+    const barW = Math.min(100, score);
+    return `<div class="metric-card" style="padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700">${b.name}</div>
+        <span class="badge ${h.cls}">${h.label}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><div class="metric-label">ACoS</div><div style="font-size:20px;font-weight:700;color:var(--${acosColor})">${b.ACoS===-1?'—':b.ACoS+'%'}</div></div>
+        <div><div class="metric-label">ROAS</div><div style="font-size:20px;font-weight:700">${b.ROAS>0?b.ROAS+'x':'—'}</div></div>
+        <div><div class="metric-label">Orders</div><div style="font-size:20px;font-weight:700">${b.Orders}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><div class="metric-label">Spend</div><div style="font-size:14px;font-weight:500;font-family:var(--font-mono)">₹${b.Spend.toFixed(0)}</div></div>
+        <div><div class="metric-label">Sales</div><div style="font-size:14px;font-weight:500;font-family:var(--font-mono)">₹${b.Sales.toFixed(0)}</div></div>
+        <div><div class="metric-label">CTR</div><div style="font-size:14px;font-weight:500;font-family:var(--font-mono)">${b.CTR}%</div></div>
+        <div><div class="metric-label">CVR</div><div style="font-size:14px;font-weight:500;font-family:var(--font-mono)">${b.CVR>0?b.CVR+'%':'—'}</div></div>
+        <div><div class="metric-label">CPC</div><div style="font-size:14px;font-weight:500;font-family:var(--font-mono)">₹${b.CPC}</div></div>
+      </div>
+      <div style="margin-top:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-mono);color:var(--text3);margin-bottom:4px">
+          <span>Health score</span><span>${score}/100</span>
+        </div>
+        <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:var(--${h.cls});border-radius:2px;transition:width 0.4s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Table
+  const tableRows = brands.map(b => {
+    const score = healthScore(b);
+    const h = healthLabel(score);
+    const acosColor = b.ACoS === -1 ? 'text3' : b.ACoS > target ? 'red' : b.ACoS < target*0.6 ? 'green' : 'text';
+    const barW = Math.min(100, score);
+    return `<tr>
+      <td style="font-weight:500">${b.name}</td>
+      <td style="text-align:right" class="mono">₹${b.Spend.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">₹${b.Sales.toFixed(0)}</td>
+      <td style="text-align:right" class="mono">${b.Orders}</td>
+      <td style="text-align:right;color:var(--${acosColor})" class="mono">${b.ACoS===-1?'—':b.ACoS+'%'}</td>
+      <td style="text-align:right" class="mono">${b.ROAS>0?b.ROAS+'x':'—'}</td>
+      <td style="text-align:right" class="mono">${b.Clicks}</td>
+      <td style="text-align:right" class="mono">${b.CTR}%</td>
+      <td style="text-align:right" class="mono">${b.CVR>0?b.CVR+'%':'—'}</td>
+      <td style="text-align:right" class="mono">₹${b.CPC}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:var(--${h.cls});border-radius:2px"></div>
+          </div>
+          <span class="badge ${h.cls}" style="flex-shrink:0">${h.label}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('brand-tbody').innerHTML = tableRows || `<tr><td colspan="10" style="padding:0"><div class="empty-state">No brand data found.</div></td></tr>`;
+  STATE._brandData = brands;
+}
+
+function exportBrandCSV() {
+  const brands = STATE._brandData || [];
+  const headers = ['Brand','Spend','Sales','Orders','ACoS','ROAS','Clicks','CTR%','CVR%','CPC'];
+  const rows = brands.map(b => [
+    b.name, b.Spend.toFixed(2), b.Sales.toFixed(2), b.Orders,
+    b.ACoS===-1?'No sales':b.ACoS+'%', b.ROAS>0?b.ROAS+'x':'—',
+    b.Clicks, b.CTR+'%', b.CVR>0?b.CVR+'%':'—', b.CPC
+  ].map(v=>`"${v}"`).join(','));
+  const csv = [headers.join(','),...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `clarix-brand-dashboard-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+const SETTINGS_KEY = 'clarix_settings';
+const SETTINGS_DEFAULTS = {
+  acos:          25,
+  roas:          3,
+  minSpend:      20,
+  budgetAlert:   15,
+  negMatch:      'NEGATIVE EXACT',
+  harvMatch:     'EXACT',
+  harvOrders:    1,
+  harvAcos:      40,
+  monthlyBudget: 50000,
+  perfPeriod:    'week',
+  currency:      '₹',
+  brandDefault:  'all',
+};
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    return saved ? { ...SETTINGS_DEFAULTS, ...JSON.parse(saved) } : { ...SETTINGS_DEFAULTS };
+  } catch(e) { return { ...SETTINGS_DEFAULTS }; }
+}
+
+function saveSettings() {
+  const s = {
+    acos:          +document.getElementById('s-acos').value          || SETTINGS_DEFAULTS.acos,
+    roas:          +document.getElementById('s-roas').value          || SETTINGS_DEFAULTS.roas,
+    minSpend:      +document.getElementById('s-min-spend').value     || 0,
+    budgetAlert:   +document.getElementById('s-budget-alert').value  || SETTINGS_DEFAULTS.budgetAlert,
+    negMatch:      document.getElementById('s-neg-match').value,
+    harvMatch:     document.getElementById('s-harv-match').value,
+    harvOrders:    +document.getElementById('s-harv-orders').value   || 1,
+    harvAcos:      +document.getElementById('s-harv-acos').value     || SETTINGS_DEFAULTS.harvAcos,
+    monthlyBudget: +document.getElementById('s-monthly-budget').value || SETTINGS_DEFAULTS.monthlyBudget,
+    perfPeriod:    document.getElementById('s-perf-period').value,
+    currency:      document.getElementById('s-currency').value,
+    brandDefault:  document.getElementById('s-brand-default').value,
+  };
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e) {}
+  applySettings(s);
+  // Show toast
+  const toast = document.getElementById('settings-toast');
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+
+function resetSettings() {
+  if (!confirm('Reset all settings to defaults?')) return;
+  try { localStorage.removeItem(SETTINGS_KEY); } catch(e) {}
+  renderSettingsPage();
+  applySettings(SETTINGS_DEFAULTS);
+}
+
+function applySettings(s) {
+  // Target ACoS sliders
+  ['acos-thresh','plc-acos','brand-acos-target'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = s.acos; el.dispatchEvent(new Event('input')); }
+  });
+  // Min spend slider
+  const spendEl = document.getElementById('spend-thresh');
+  if (spendEl) { spendEl.value = s.minSpend; spendEl.dispatchEvent(new Event('input')); }
+  const negSpendEl = document.getElementById('neg-spend');
+  if (negSpendEl) { negSpendEl.value = s.minSpend; negSpendEl.dispatchEvent(new Event('input')); }
+  // Budget alert threshold
+  const budgetAlertEl = document.getElementById('budget-alert-pct');
+  if (budgetAlertEl) { budgetAlertEl.value = s.budgetAlert; budgetAlertEl.dispatchEvent(new Event('input')); }
+  // Monthly budget
+  const budgetEl = document.getElementById('budget-total');
+  if (budgetEl) budgetEl.value = s.monthlyBudget;
+  // Negative match type
+  const negMatchEl = document.getElementById('neg-match');
+  if (negMatchEl) negMatchEl.value = s.negMatch;
+  // Harvest match type
+  const harvMatchEl = document.getElementById('harv-match');
+  if (harvMatchEl) harvMatchEl.value = s.harvMatch;
+  // Harvest min orders
+  const harvOrdersEl = document.getElementById('harv-orders');
+  if (harvOrdersEl) { harvOrdersEl.value = s.harvOrders; harvOrdersEl.dispatchEvent(new Event('input')); }
+  // Harvest max ACoS
+  const harvAcosEl = document.getElementById('harv-acos');
+  if (harvAcosEl) { harvAcosEl.value = s.harvAcos; harvAcosEl.dispatchEvent(new Event('input')); }
+  // Performance period
+  const perfPeriodEl = document.getElementById('perf-period');
+  if (perfPeriodEl) perfPeriodEl.value = s.perfPeriod;
+  // Currency symbol — store globally
+  window.CURRENCY = s.currency;
+}
+
+function renderSettingsPage() {
+  const s = loadSettings();
+  document.getElementById('s-acos').value          = s.acos;
+  document.getElementById('s-roas').value          = s.roas;
+  document.getElementById('s-min-spend').value     = s.minSpend;
+  document.getElementById('s-budget-alert').value  = s.budgetAlert;
+  document.getElementById('s-neg-match').value     = s.negMatch;
+  document.getElementById('s-harv-match').value    = s.harvMatch;
+  document.getElementById('s-harv-orders').value   = s.harvOrders;
+  document.getElementById('s-harv-acos').value     = s.harvAcos;
+  document.getElementById('s-monthly-budget').value = s.monthlyBudget;
+  document.getElementById('s-perf-period').value   = s.perfPeriod;
+  document.getElementById('s-currency').value      = s.currency;
+
+  // Populate brand default dropdown from loaded data
+  const brandSel = document.getElementById('s-brand-default');
+  const kw = STATE.kwData || [];
+  const brands = ['all', ...new Set(kw.map(r => r.Brand).filter(b => b && b !== '#ERROR!'))].sort();
+  brandSel.innerHTML = brands.map(b => `<option value="${b}">${b === 'all' ? 'All brands' : b}</option>`).join('');
+  brandSel.value = brands.includes(s.brandDefault) ? s.brandDefault : 'all';
+}
+
+// Apply settings on boot
+(function() {
+  const s = loadSettings();
+  window.CURRENCY = s.currency;
+  // Will apply to controls after file load via applySettingsOnLoad()
+})();
+
+function applySettingsOnLoad() {
+  const s = loadSettings();
+  applySettings(s);
+}
+
+
+// ─── PERIOD COMPARISON ────────────────────────────────────────────────────────
+function delta(a, b) {
+  if (a === 0 && b === 0) return null;
+  if (b === 0) return null;
+  return ((a - b) / Math.abs(b) * 100);
+}
+
+function deltaHtml(a, b, lowerIsBetter=false) {
+  const d = delta(a, b);
+  if (d === null) return '<span style="color:var(--text3)">—</span>';
+  const improved = lowerIsBetter ? d < 0 : d > 0;
+  const color = Math.abs(d) < 2 ? 'text3' : improved ? 'green' : 'red';
+  const arrow = d > 0 ? '▲' : '▼';
+  return `<span style="color:var(--${color});font-size:11px;font-family:var(--font-mono)">${arrow} ${Math.abs(d).toFixed(1)}%</span>`;
+}
+
+function sumMetrics(data) {
+  return data.reduce((acc, r) => {
+    acc.Spend      += r.Spend  || 0;
+    acc.Sales      += r.Sales  || 0;
+    acc.Orders     += r.Orders || 0;
+    acc.Clicks     += r.Clicks || 0;
+    acc.Impressions+= r.Impressions || 0;
+    return acc;
+  }, { Spend:0, Sales:0, Orders:0, Clicks:0, Impressions:0 });
+}
+
+function derivedMetrics(s) {
+  return {
+    ...s,
+    ACoS: s.Sales  > 0 ? +(s.Spend/s.Sales*100).toFixed(1) : null,
+    ROAS: s.Spend  > 0 ? +(s.Sales/s.Spend).toFixed(2)     : null,
+    CTR:  s.Impressions > 0 ? +(s.Clicks/s.Impressions*100).toFixed(2) : null,
+    CVR:  s.Clicks > 0 ? +(s.Orders/s.Clicks*100).toFixed(2) : null,
+    CPC:  s.Clicks > 0 ? +(s.Spend/s.Clicks).toFixed(2)    : null,
+  };
+}
+
+function renderComparePage() {
+  if (!STATE_B) {
+    document.getElementById('cmp-kpis').innerHTML = '<div style="padding:32px;color:var(--text3);font-size:13px">Upload a second file (Period B) to enable comparison mode.</div>';
+    document.getElementById('cmp-thead').innerHTML = '';
+    document.getElementById('cmp-tbody').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('cmp-label-a').textContent = STATE.fileName;
+  document.getElementById('cmp-label-b').textContent = STATE_B.fileName;
+
+  const view = document.getElementById('cmp-view').value;
+
+  // Overall KPI cards — use asinData only to avoid double-counting spend/sales across sheets
+  const mA = derivedMetrics(sumMetrics(STATE.asinData));
+  const mB = derivedMetrics(sumMetrics(STATE_B.asinData));
+
+  const kpis = [
+    { label:'Spend',   a: mA.Spend,  b: mB.Spend,  fmt: v=>`₹${v.toFixed(0)}`,  lower:true  },
+    { label:'Sales',   a: mA.Sales,  b: mB.Sales,  fmt: v=>`₹${v.toFixed(0)}`,  lower:false },
+    { label:'Orders',  a: mA.Orders, b: mB.Orders, fmt: v=>v,                     lower:false },
+    { label:'ACoS%',   a: mA.ACoS,   b: mB.ACoS,   fmt: v=>v?v+'%':'—',          lower:true  },
+    { label:'ROAS',    a: mA.ROAS,   b: mB.ROAS,   fmt: v=>v?v+'x':'—',          lower:false },
+    { label:'CTR%',    a: mA.CTR,    b: mB.CTR,    fmt: v=>v?v+'%':'—',          lower:false },
+    { label:'CVR%',    a: mA.CVR,    b: mB.CVR,    fmt: v=>v?v+'%':'—',          lower:false },
+    { label:'CPC (₹)', a: mA.CPC,    b: mB.CPC,    fmt: v=>v?`₹${v}`:'—',        lower:true  },
+  ];
+
+  document.getElementById('cmp-kpis').innerHTML = kpis.map(k => `
+    <div class="metric-card">
+      <div class="metric-label">${k.label}</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">A</span>
+          <span style="font-size:18px;font-weight:600;color:var(--accent)">${k.fmt(k.a||0)}</span>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">B</span>
+          <span style="font-size:18px;font-weight:600;color:var(--green)">${k.fmt(k.b||0)}</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px;padding-top:6px;border-top:1px solid var(--border)">
+          ${deltaHtml(k.a||0, k.b||0, k.lower)}
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Detail table
+  let rowsA, rowsB, nameField, extraCols;
+  if (view === 'asin') {
+    rowsA = STATE.asinData;  rowsB = STATE_B.asinData;
+    nameField = 'Advertised ASIN';
+    extraCols = [{ label:'Campaign', key:'Campaign Name' }];
+  } else if (view === 'brand') {
+    // Aggregate by brand from STR
+    const aggrBrand = (data) => {
+      const m = {};
+      data.forEach(r => {
+        const b = r.Brand || '—';
+        if (!m[b]) m[b] = {Brand:b,Spend:0,Sales:0,Orders:0,Clicks:0,Impressions:0};
+        m[b].Spend+=r.Spend||0; m[b].Sales+=r.Sales||0; m[b].Orders+=r.Orders||0;
+        m[b].Clicks+=r.Clicks||0; m[b].Impressions+=r.Impressions||0;
+      });
+      return Object.values(m);
+    };
+    rowsA = aggrBrand(STATE.kwData); rowsB = aggrBrand(STATE_B.kwData);
+    nameField = 'Brand'; extraCols = [];
+  } else if (view === 'placement') {
+    const aggrPlc = (data) => {
+      const m = {};
+      data.forEach(r => {
+        const p = normalizePlacement(r.Placement);
+        if (!m[p]) m[p] = {Placement:p,Spend:0,Sales:0,Orders:0,Clicks:0,Impressions:0};
+        m[p].Spend+=r.Spend||0; m[p].Sales+=r.Sales||0; m[p].Orders+=r.Orders||0;
+        m[p].Clicks+=r.Clicks||0; m[p].Impressions+=r.Impressions||0;
+      });
+      return Object.values(m);
+    };
+    rowsA = aggrPlc(STATE.placementData); rowsB = aggrPlc(STATE_B.placementData);
+    nameField = 'Placement'; extraCols = [];
+  } else if (view === 'kw') {
+    rowsA = STATE.kwData; rowsB = STATE_B.kwData;
+    nameField = 'Customer Search Term';
+    extraCols = [{ label:'Brand', key:'Brand' }];
+  } else {
+    // overview — nothing else to show
+    document.getElementById('cmp-thead').innerHTML = '';
+    document.getElementById('cmp-tbody').innerHTML = '';
+    return;
+  }
+
+  // Build lookup map for B by nameField
+  const mapB = {};
+  rowsB.forEach(r => { mapB[r[nameField]] = r; });
+
+  // Merge A and B
+  const merged = rowsA.map(rA => {
+    const rB = mapB[rA[nameField]] || {};
+    const mA = derivedMetrics(rA);
+    const mB = derivedMetrics(rB);
+    return { name: rA[nameField], extra: extraCols.map(c=>rA[c.key]||''), mA, mB };
+  });
+  merged.sort((x,y) => (y.mA.Spend||0)-(x.mA.Spend||0));
+
+  const extraHeaders = extraCols.map(c=>`<th style="width:15%">${c.label}</th>`).join('');
+  document.getElementById('cmp-thead').innerHTML = `<tr>
+    <th style="width:${extraCols.length?'16':'22'}%">${nameField}</th>
+    ${extraHeaders}
+    <th style="width:8%;text-align:right">Spend A</th>
+    <th style="width:8%;text-align:right">Spend B</th>
+    <th style="width:7%;text-align:right">Δ Spend</th>
+    <th style="width:7%;text-align:right">ACoS A</th>
+    <th style="width:7%;text-align:right">ACoS B</th>
+    <th style="width:7%;text-align:right">Δ ACoS</th>
+    <th style="width:7%;text-align:right">ROAS A</th>
+    <th style="width:7%;text-align:right">ROAS B</th>
+    <th style="width:7%;text-align:right">Δ Orders</th>
+  </tr>`;
+
+  document.getElementById('cmp-tbody').innerHTML = merged.map((m,i) => `
+    <tr>
+      <td class="mono" title="${m.name}">${m.name}</td>
+      ${m.extra.map(e=>`<td class="text2">${e}</td>`).join('')}
+      <td style="text-align:right" class="mono">₹${(m.mA.Spend||0).toFixed(0)}</td>
+      <td style="text-align:right" class="mono">₹${(m.mB.Spend||0).toFixed(0)}</td>
+      <td style="text-align:right">${deltaHtml(m.mA.Spend||0, m.mB.Spend||0, true)}</td>
+      <td style="text-align:right" class="mono">${m.mA.ACoS?m.mA.ACoS+'%':'—'}</td>
+      <td style="text-align:right" class="mono">${m.mB.ACoS?m.mB.ACoS+'%':'—'}</td>
+      <td style="text-align:right">${deltaHtml(m.mA.ACoS||0, m.mB.ACoS||0, true)}</td>
+      <td style="text-align:right" class="mono">${m.mA.ROAS?m.mA.ROAS+'x':'—'}</td>
+      <td style="text-align:right" class="mono">${m.mB.ROAS?m.mB.ROAS+'x':'—'}</td>
+      <td style="text-align:right">${deltaHtml(m.mA.Orders||0, m.mB.Orders||0, false)}</td>
+    </tr>`).join('') || `<tr><td colspan="10" style="padding:0"><div class="empty-state">No data to compare.</div></td></tr>`;
+
+  STATE._compareRows = merged;
+}
+
+function exportCompareCSV() {
+  const rows = STATE._compareRows || [];
+  if (!rows.length) return;
+  const headers = ['Name','Spend A','Spend B','Δ Spend%','ACoS A','ACoS B','Δ ACoS%','ROAS A','ROAS B','Orders A','Orders B','Δ Orders%'];
+  const csvRows = rows.map(r => [
+    r.name,
+    (r.mA.Spend||0).toFixed(2), (r.mB.Spend||0).toFixed(2),
+    delta(r.mA.Spend||0,r.mB.Spend||0)?.toFixed(1)+'%'||'—',
+    r.mA.ACoS||'—', r.mB.ACoS||'—',
+    delta(r.mA.ACoS||0,r.mB.ACoS||0)?.toFixed(1)+'%'||'—',
+    r.mA.ROAS||'—', r.mB.ROAS||'—',
+    r.mA.Orders||0, r.mB.Orders||0,
+    delta(r.mA.Orders||0,r.mB.Orders||0)?.toFixed(1)+'%'||'—',
+  ].map(v=>`"${v}"`).join(','));
+  const csv = [headers.join(','),...csvRows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clarix-period-compare-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function exportBidCSV() {
+  const thresh = getThresh();
+  const tab = STATE.bidTab;
+  const nameField = tab === 'asin' ? 'Advertised ASIN' : 'Customer Search Term';
+  const data = (tab === 'asin' ? STATE.asinData : STATE.kwData)
+    .map(r => ({ ...r, _alert: getAlert(r, thresh) }))
+    .filter(r => r._alert !== null);
+
+  const headers = [nameField, 'Campaign Name', 'Spend', 'Sales', 'Orders', 'ACoS', 'CVR%', 'CPC', 'Alert', 'Recommended Bid'];
+  const rows = data.map(r => {
+    const rb = recBid(r, thresh);
+    return [
+      r[nameField] || '',
+      r['Campaign Name'] || '',
+      r.Spend.toFixed(2),
+      r.Sales.toFixed(2),
+      r.Orders,
+      r.ACoS === -1 ? 'No sales' : r.ACoS + '%',
+      r.CVR > 0 ? r.CVR + '%' : '—',
+      r.CPC.toFixed(2),
+      r._alert ? r._alert.label : '',
+      rb.text,
+    ].map(v => `"${v}"`).join(',');
+  });
+
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clarix-bid-recs-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
